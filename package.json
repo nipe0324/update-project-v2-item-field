@@ -1,17 +1,8 @@
 {
-  "name": "typescript-action",
-  "description": "GitHub Actions TypeScript template",
+  "name": "@nipe0324/update-project-v2-item-field",
+  "description": "Update Project v2 Item Field",
   "version": "0.0.0",
-  "author": "",
-  "private": true,
-  "homepage": "https://github.com/actions/typescript-action",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/actions/typescript-action.git"
-  },
-  "bugs": {
-    "url": "https://github.com/actions/typescript-action/issues"
-  },
+  "author": "nipe0324",
   "keywords": [
     "actions",
     "node",
