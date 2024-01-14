@@ -1,23 +1,21 @@
-name: 'The name of your action here'
-description: 'Provide a description here'
-author: 'Your name or organization here'
-
-# Add your action's branding here. This will appear on the GitHub Marketplace.
+name: Update Project v2 Item Field
+description: Automatically update a field on a GitHub project v2 item
+author: nipe0324
 branding:
-  icon: 'heart'
-  color: 'red'
-
-# Define your inputs here.
+  icon: table
 inputs:
-  milliseconds:
-    description: 'Your input description here'
+  project-url:
     required: true
-    default: '1000'
+    description: URL of the project vw to update item field
+  github-token:
+    required: true
+    description: A GitHub personal access token with write access to the project
 
-# Define your outputs here.
 outputs:
-  time:
-    description: 'Your output description here'
+  projectId:
+    description: The ID of the GitHub project v2
+  contentId:
+    description: The ID of the Issues or PRs
 
 runs:
   using: node20

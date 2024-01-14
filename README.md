@@ -10,14 +10,32 @@ Notice: Thie action is in progress.
 - Set Current Date to "Closed Date" field when the issue is closed.
 - Calculate "Time to Close Days" to handle project management.
 
-## Inputs
+## Example Usage
 
 TODO
+
+## Inputs
+
+- `project-url` **(required)** is the URL of the GitHub project v2 to update item field.
+  _eg: `https://github.com/orgs|users/<ownerName>/projects/<projectNumber>`_
+- `github-token` **(required)** is a [personal access
+  token](https://github.com/settings/tokens/new) with `repo` and `project` scopes.
+  _See [Creating a PAT and adding it to your repository](#creating-a-pat-and-adding-it-to-your-repository) for more details_
 
 ## Outputs
 
 TODO
 
-## Example Usage
+## Development
 
-TODO
+```shell
+git clone https://github.com/nipe0324/update-project-v2-item-field
+cd update-project-v2-item-field
+npm install
+```
+
+Run all tests (format, lint, test, coverage, package)
+
+```shell
+npm run all
+```
