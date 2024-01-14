@@ -24,7 +24,7 @@ interface ProjectV2Field {
   __typename: 'ProjectV2Field' | 'ProjectV2SingleSelectField'
   id: string
   name: string
-  dataType: string
+  dataType: 'TEXT' | 'NUMBER' | 'DATE' | 'SINGLE_SELECT'
 
   options?: {
     id: string
@@ -38,9 +38,21 @@ interface AddProjectV2ItemByIdResponse {
   } | null
 }
 
+interface UpdateProjectV2ItemFieldValueResponse {
+  updateProjectV2ItemFieldValue: {
+    projectV2Item: ProjectV2Item
+  } | null
+}
+
 interface ProjectV2Item {
   id: string
 }
+
+type ProjectV2FieldValue =
+  | { text: string }
+  | { number: number }
+  | { date: string }
+  | { singleSelectOptionId: string }
 
 export class ExOctokit {
   octokit: ReturnType<typeof getOctokit>
@@ -54,7 +66,7 @@ export class ExOctokit {
     projectOwnerName: string,
     projectNumber: number
   ): Promise<string | undefined> {
-    const projectV2IdResponse = await this.octokit.graphql<ProjectV2IdResponse>(
+    const resp = await this.octokit.graphql<ProjectV2IdResponse>(
       `query fetchProjectV2Id($projectOwnerName: String!, $projectNumber: Int!) {
         ${ownerTypeQuery}(login: $projectOwnerName) {
           projectV2(number: $projectNumber) {
@@ -68,67 +80,100 @@ export class ExOctokit {
       }
     )
 
-    return projectV2IdResponse[ownerTypeQuery]?.projectV2.id
+    return resp[ownerTypeQuery]?.projectV2.id
   }
 
-  // TODO: support 'ProjectV2IterationField' Type
   async fetchProjectV2FieldByName(
     projectV2Id: string,
     fieldName: string
-  ): Promise<ProjectV2Field | null | undefined> {
-    const projectV2FieldResponse =
-      await this.octokit.graphql<ProjectV2FieldResponse>(
-        `query fetchProjectV2FieldByName($projectV2Id: ID!, $fieldName: String!) {
-          node(id: $projectV2Id) {
-            ... on ProjectV2 {
-              field(name: $fieldName) {
-                __typename
-                ... on ProjectV2Field {
+  ): Promise<ProjectV2Field | undefined> {
+    const resp = await this.octokit.graphql<ProjectV2FieldResponse>(
+      `query fetchProjectV2FieldByName($projectV2Id: ID!, $fieldName: String!) {
+        node(id: $projectV2Id) {
+          ... on ProjectV2 {
+            field(name: $fieldName) {
+              __typename
+              ... on ProjectV2Field {
+                id
+                name
+                dataType
+              }
+              ... on ProjectV2SingleSelectField {
+                id
+                name
+                dataType
+                options {
                   id
                   name
-                  dataType
-                }
-                ... on ProjectV2SingleSelectField {
-                  id
-                  name
-                  dataType
-                  options {
-                    id
-                    name
-                  }
                 }
               }
             }
           }
-        }`,
-        {
-          projectV2Id,
-          fieldName
         }
-      )
+      }`,
+      {
+        projectV2Id,
+        fieldName
+      }
+    )
 
-    return projectV2FieldResponse.node?.field
+    return resp.node?.field ?? undefined
   }
 
   async addProjectV2ItemByContentId(
     projectV2Id: string,
     contentId: string
   ): Promise<ProjectV2Item | undefined> {
-    const addProjectV2ItemByIdResponse =
-      await this.octokit.graphql<AddProjectV2ItemByIdResponse>(
-        `mutation addProjectV2ItemById($projectV2Id: ID!, $contentId: ID!) {
-          addProjectV2ItemById(input: { projectId: $projectV2Id, contentId: $contentId }) {
-            item {
+    const resp = await this.octokit.graphql<AddProjectV2ItemByIdResponse>(
+      `mutation addProjectV2ItemById($projectV2Id: ID!, $contentId: ID!) {
+        addProjectV2ItemById(input: { projectId: $projectV2Id, contentId: $contentId }) {
+          item {
+            id
+          }
+        }
+      }`,
+      {
+        projectV2Id,
+        contentId
+      }
+    )
+
+    return resp.addProjectV2ItemById?.item
+  }
+
+  async updateProjectV2ItemFieldValue(
+    projectV2Id: string,
+    itemId: string,
+    fieldId: string,
+    value: ProjectV2FieldValue
+  ): Promise<ProjectV2Item | undefined> {
+    const resp =
+      await this.octokit.graphql<UpdateProjectV2ItemFieldValueResponse>(
+        `mutation updateProjectV2ItemFieldValue(
+          $projectV2Id: ID!,
+          $itemId: ID!,
+          $fieldId: ID!,
+          $value: ProjectV2FieldValue!
+        ) {
+          updateProjectV2ItemFieldValue(input: {
+            projectId: $projectV2Id,
+            itemId: $itemId,
+            fieldId: $fieldId,
+            value: $value
+          }) {
+            projectV2Item {
               id
             }
           }
         }`,
         {
           projectV2Id,
-          contentId
+          itemId,
+          fieldId,
+          value
         }
       )
 
-    return addProjectV2ItemByIdResponse.addProjectV2ItemById?.item
+    return resp.updateProjectV2ItemFieldValue?.projectV2Item
   }
 }

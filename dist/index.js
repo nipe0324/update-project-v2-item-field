@@ -28920,7 +28920,7 @@ class ExOctokit {
         this.octokit = (0, github_1.getOctokit)(ghToken);
     }
     async fetchProjectV2Id(ownerTypeQuery, projectOwnerName, projectNumber) {
-        const projectV2IdResponse = await this.octokit.graphql(`query fetchProjectV2Id($projectOwnerName: String!, $projectNumber: Int!) {
+        const resp = await this.octokit.graphql(`query fetchProjectV2Id($projectOwnerName: String!, $projectNumber: Int!) {
         ${ownerTypeQuery}(login: $projectOwnerName) {
           projectV2(number: $projectNumber) {
             id
@@ -28930,50 +28930,74 @@ class ExOctokit {
             projectOwnerName,
             projectNumber
         });
-        return projectV2IdResponse[ownerTypeQuery]?.projectV2.id;
+        return resp[ownerTypeQuery]?.projectV2.id;
     }
-    // TODO: support 'ProjectV2IterationField' Type
     async fetchProjectV2FieldByName(projectV2Id, fieldName) {
-        const projectV2FieldResponse = await this.octokit.graphql(`query fetchProjectV2FieldByName($projectV2Id: ID!, $fieldName: String!) {
-          node(id: $projectV2Id) {
-            ... on ProjectV2 {
-              field(name: $fieldName) {
-                __typename
-                ... on ProjectV2Field {
+        const resp = await this.octokit.graphql(`query fetchProjectV2FieldByName($projectV2Id: ID!, $fieldName: String!) {
+        node(id: $projectV2Id) {
+          ... on ProjectV2 {
+            field(name: $fieldName) {
+              __typename
+              ... on ProjectV2Field {
+                id
+                name
+                dataType
+              }
+              ... on ProjectV2SingleSelectField {
+                id
+                name
+                dataType
+                options {
                   id
                   name
-                  dataType
-                }
-                ... on ProjectV2SingleSelectField {
-                  id
-                  name
-                  dataType
-                  options {
-                    id
-                    name
-                  }
                 }
               }
             }
           }
-        }`, {
+        }
+      }`, {
             projectV2Id,
             fieldName
         });
-        return projectV2FieldResponse.node?.field;
+        return resp.node?.field ?? undefined;
     }
     async addProjectV2ItemByContentId(projectV2Id, contentId) {
-        const addProjectV2ItemByIdResponse = await this.octokit.graphql(`mutation addProjectV2ItemById($projectV2Id: ID!, $contentId: ID!) {
-          addProjectV2ItemById(input: { projectId: $projectV2Id, contentId: $contentId }) {
-            item {
+        const resp = await this.octokit.graphql(`mutation addProjectV2ItemById($projectV2Id: ID!, $contentId: ID!) {
+        addProjectV2ItemById(input: { projectId: $projectV2Id, contentId: $contentId }) {
+          item {
+            id
+          }
+        }
+      }`, {
+            projectV2Id,
+            contentId
+        });
+        return resp.addProjectV2ItemById?.item;
+    }
+    async updateProjectV2ItemFieldValue(projectV2Id, itemId, fieldId, value) {
+        const resp = await this.octokit.graphql(`mutation updateProjectV2ItemFieldValue(
+          $projectV2Id: ID!,
+          $itemId: ID!,
+          $fieldId: ID!,
+          $value: ProjectV2FieldValue!
+        ) {
+          updateProjectV2ItemFieldValue(input: {
+            projectId: $projectV2Id,
+            itemId: $itemId,
+            fieldId: $fieldId,
+            value: $value
+          }) {
+            projectV2Item {
               id
             }
           }
         }`, {
             projectV2Id,
-            contentId
+            itemId,
+            fieldId,
+            value
         });
-        return addProjectV2ItemByIdResponse.addProjectV2ItemById?.item;
+        return resp.updateProjectV2ItemFieldValue?.projectV2Item;
     }
 }
 exports.ExOctokit = ExOctokit;
