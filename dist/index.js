@@ -28906,7 +28906,7 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
-/***/ 3562:
+/***/ 6962:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -29089,7 +29089,7 @@ exports.updateProjectV2ItemField = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const utils_1 = __nccwpck_require__(1314);
-const ex_octokit_1 = __nccwpck_require__(3562);
+const ex_octokit_1 = __nccwpck_require__(6962);
 const urlParse = /\/(?<ownerType>orgs|users)\/(?<ownerName>[^/]+)\/projects\/(?<projectNumber>\d+)/;
 async function updateProjectV2ItemField() {
     // Get the action inputs

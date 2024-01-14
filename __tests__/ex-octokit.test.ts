@@ -1,5 +1,5 @@
 import * as github from '@actions/github'
-import { ExOctokit } from '../../src/ex-octokit'
+import { ExOctokit } from '../src/ex-octokit'
 
 describe('fetchProjectV2Id', () => {
   afterEach(() => {
