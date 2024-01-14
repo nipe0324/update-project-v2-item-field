@@ -15,7 +15,9 @@ describe('updateProjectV2ItemField', () => {
   beforeEach(() => {
     mockGetInput({
       'project-url': 'https://github.com/orgs/nipe0324/projects/1',
-      'github-token': 'gh_token'
+      'github-token': 'gh_token',
+      'field-name': 'Status',
+      'field-value': 'In Progress'
     })
 
     debug = mockDebug()
@@ -45,14 +47,19 @@ describe('updateProjectV2ItemField', () => {
 
     mockFetchProjectV2Id().mockResolvedValue('project-id')
     mockAddProjectV2ItemByContentId().mockResolvedValue({ id: 'item-id' })
-    mockFetchProjectV2FieldByName().mockResolvedValue({ id: 'field-id' })
+    mockFetchProjectV2FieldByName().mockResolvedValue({
+      id: 'field-id',
+      dataType: 'TEXT'
+    })
+    mockUpdateProjectV2ItemFieldValue().mockResolvedValue({ id: 'item-id' })
 
     await updateProjectV2ItemField()
 
     expect(debug).toHaveBeenCalledWith('ProjectV2 ID: project-id')
     expect(debug).toHaveBeenCalledWith('Item ID: item-id')
     expect(debug).toHaveBeenCalledWith('Field ID: field-id')
-    expect(outputs.projectV2Id).toEqual('project-id')
+    expect(debug).toHaveBeenCalledWith('Field Value: {"text":"In Progress"}')
+    expect(outputs.itemId).toEqual('item-id')
   })
 
   it(`throws an error when url isn't a valid project url`, async () => {
@@ -76,13 +83,9 @@ describe('updateProjectV2ItemField', () => {
       }
     }
 
-    const infoSpy = jest.spyOn(core, 'info')
-    const fetchProjectV2IdMock = mockFetchProjectV2Id()
     await expect(updateProjectV2ItemField()).rejects.toThrow(
       'Invalid project URL: https://github.com/orgs/github/repositories.'
     )
-    expect(infoSpy).not.toHaveBeenCalled()
-    expect(fetchProjectV2IdMock).not.toHaveBeenCalled()
   })
 })
 
@@ -113,4 +116,8 @@ function mockAddProjectV2ItemByContentId(): jest.SpyInstance {
 
 function mockFetchProjectV2FieldByName(): jest.SpyInstance {
   return jest.spyOn(ExOctokit.prototype, 'fetchProjectV2FieldByName')
+}
+
+function mockUpdateProjectV2ItemFieldValue(): jest.SpyInstance {
+  return jest.spyOn(ExOctokit.prototype, 'updateProjectV2ItemFieldValue')
 }

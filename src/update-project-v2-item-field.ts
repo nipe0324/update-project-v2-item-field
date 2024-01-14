@@ -3,6 +3,8 @@ import * as github from '@actions/github'
 import { mustGetOwnerTypeQuery } from './utils'
 import { ExOctokit } from './ex-octokit'
 
+import type { ProjectV2Field, ProjectV2FieldValue } from './ex-octokit'
+
 const urlParse =
   /\/(?<ownerType>orgs|users)\/(?<ownerName>[^/]+)\/projects\/(?<projectNumber>\d+)/
 
@@ -11,6 +13,7 @@ export async function updateProjectV2ItemField(): Promise<void> {
   const projectUrl = core.getInput('project-url', { required: true })
   const ghToken = core.getInput('github-token', { required: true })
   const fieldName = core.getInput('field-name', { required: true })
+  const fieldValue = core.getInput('field-value', { required: true })
 
   // Get the issue/PR owner name and node ID from payload
   const issue =
@@ -28,10 +31,6 @@ export async function updateProjectV2ItemField(): Promise<void> {
   }
   const projectNumber = parseInt(urlMatch.groups?.projectNumber ?? '', 10)
   const ownerType = urlMatch.groups?.ownerType
-
-  core.debug(`Project owner: ${projectOwnerName}`)
-  core.debug(`Project number: ${projectNumber}`)
-  core.debug(`Project owner type: ${ownerType}`)
 
   // Fetch the project node ID
   const exOctokit = new ExOctokit(ghToken)
@@ -65,12 +64,46 @@ export async function updateProjectV2ItemField(): Promise<void> {
     throw new Error(`Field is not found: ${fieldName}`)
   }
 
-  // TODO: Update the field on the item
+  // Build the value by field data type
+  const value = buildFieldValue(field, fieldValue)
+  const updatedItem = await exOctokit.updateProjectV2ItemFieldValue(
+    projectV2Id,
+    item.id,
+    field.id,
+    value
+  )
+  if (!updatedItem) {
+    throw new Error(`Failed to update item field value`)
+  }
 
   core.debug(`ProjectV2 ID: ${projectV2Id}`)
   core.debug(`Item ID: ${item.id}`)
   core.debug(`Field ID: ${field.id}`)
+  core.debug(`Field Value: ${JSON.stringify(value)}`)
 
   // Set outputs for other workflow steps to use
-  core.setOutput('projectV2Id', projectV2Id)
+  core.setOutput('itemId', updatedItem.id)
+}
+
+function buildFieldValue(
+  field: ProjectV2Field,
+  fieldValue: string
+): ProjectV2FieldValue {
+  switch (field.dataType) {
+    case 'TEXT':
+      return { text: fieldValue }
+    case 'NUMBER':
+      return { number: Number(fieldValue) }
+    case 'DATE':
+      return { date: fieldValue }
+    case 'SINGLE_SELECT': {
+      const option = field.options?.find(o => o.name === fieldValue)
+      if (!option) {
+        throw new Error(`Option is not found: ${fieldValue}`)
+      }
+      return { singleSelectOptionId: option.id }
+    }
+    default:
+      throw new Error(`Unsupported field data type: ${field.dataType}`)
+  }
 }

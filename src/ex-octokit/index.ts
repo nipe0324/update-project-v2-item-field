@@ -20,18 +20,6 @@ interface ProjectV2FieldResponse {
   } | null
 }
 
-interface ProjectV2Field {
-  __typename: 'ProjectV2Field' | 'ProjectV2SingleSelectField'
-  id: string
-  name: string
-  dataType: 'TEXT' | 'NUMBER' | 'DATE' | 'SINGLE_SELECT'
-
-  options?: {
-    id: string
-    name: string
-  }[]
-}
-
 interface AddProjectV2ItemByIdResponse {
   addProjectV2ItemById: {
     item: ProjectV2Item
@@ -44,11 +32,23 @@ interface UpdateProjectV2ItemFieldValueResponse {
   } | null
 }
 
-interface ProjectV2Item {
+export interface ProjectV2Field {
+  __typename: 'ProjectV2Field' | 'ProjectV2SingleSelectField'
+  id: string
+  name: string
+  dataType: 'TEXT' | 'NUMBER' | 'DATE' | 'SINGLE_SELECT'
+
+  options?: {
+    id: string
+    name: string
+  }[]
+}
+
+export interface ProjectV2Item {
   id: string
 }
 
-type ProjectV2FieldValue =
+export type ProjectV2FieldValue =
   | { text: string }
   | { number: number }
   | { date: string }
