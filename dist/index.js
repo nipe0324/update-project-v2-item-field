@@ -28934,7 +28934,7 @@ class ExOctokit {
     }
     // TODO: support 'ProjectV2IterationField' Type
     async fetchProjectV2FieldByName(projectV2Id, fieldName) {
-        const projectV2FieldResponse = await this.octokit.graphql(`query fetchProjectV2FieldByName($projectOwnerName: String!, $fieldName: Int!) {
+        const projectV2FieldResponse = await this.octokit.graphql(`query fetchProjectV2FieldByName($projectV2Id: ID!, $fieldName: Int!) {
           node(id: $projectV2Id) {
             ... on ProjectV2 {
               field(name: $fieldName) {
