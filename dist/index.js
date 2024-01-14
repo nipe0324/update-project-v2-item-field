@@ -29096,15 +29096,22 @@ async function updateProjectV2ItemField() {
         throw new Error(`ProjectV2 ID is undefined`);
     }
     const contentId = issue?.node_id;
+    // Add the issue/PR to the project and get item
+    const item = await exOctokit.addProjectV2ItemByContentId(projectV2Id, contentId);
+    if (!item) {
+        throw new Error(`Failed to add item to project`);
+    }
     // Fetch the field node ID
     const field = await exOctokit.fetchProjectV2FieldByName(projectV2Id, fieldName);
-    const fieldId = field?.id;
+    if (!field) {
+        throw new Error(`Field is not found: ${fieldName}`);
+    }
+    // TODO: Update the field on the item
     core.debug(`ProjectV2 ID: ${projectV2Id}`);
-    core.debug(`Field ID: ${fieldId}`);
-    core.debug(`Content ID: ${contentId}`);
+    core.debug(`Item ID: ${item.id}`);
+    core.debug(`Field ID: ${field.id}`);
     // Set outputs for other workflow steps to use
     core.setOutput('projectV2Id', projectV2Id);
-    core.setOutput('contentId', contentId);
 }
 exports.updateProjectV2ItemField = updateProjectV2ItemField;
 

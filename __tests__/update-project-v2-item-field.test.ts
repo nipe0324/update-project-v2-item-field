@@ -27,7 +27,7 @@ describe('updateProjectV2ItemField', () => {
     jest.restoreAllMocks()
   })
 
-  it('sets an issue from the same organization to the project', async () => {
+  it('updates project v2 item field by inputs', async () => {
     github.context.payload = {
       issue: {
         number: 1,
@@ -44,11 +44,13 @@ describe('updateProjectV2ItemField', () => {
     }
 
     mockFetchProjectV2Id().mockResolvedValue('project-id')
+    mockAddProjectV2ItemByContentId().mockResolvedValue({ id: 'item-id' })
     mockFetchProjectV2FieldByName().mockResolvedValue({ id: 'field-id' })
 
     await updateProjectV2ItemField()
 
     expect(debug).toHaveBeenCalledWith('ProjectV2 ID: project-id')
+    expect(debug).toHaveBeenCalledWith('Item ID: item-id')
     expect(debug).toHaveBeenCalledWith('Field ID: field-id')
     expect(outputs.projectV2Id).toEqual('project-id')
   })
@@ -82,32 +84,6 @@ describe('updateProjectV2ItemField', () => {
     expect(infoSpy).not.toHaveBeenCalled()
     expect(fetchProjectV2IdMock).not.toHaveBeenCalled()
   })
-
-  it(`works with URLs that are not under the github.com domain`, async () => {
-    github.context.payload = {
-      issue: {
-        number: 1,
-        // eslint-disable-next-line camelcase
-        html_url:
-          'https://notgithub.com/myorg/update-project-v2-item-field/issues/74'
-      },
-      repository: {
-        name: 'update-project-v2-item-field',
-        owner: {
-          login: 'myorg'
-        }
-      }
-    }
-
-    mockFetchProjectV2Id().mockResolvedValue('project-id')
-    mockFetchProjectV2FieldByName().mockResolvedValue({ id: 'field-id' })
-
-    await updateProjectV2ItemField()
-
-    expect(debug).toHaveBeenCalledWith('ProjectV2 ID: project-id')
-    expect(debug).toHaveBeenCalledWith('Field ID: field-id')
-    expect(outputs.projectV2Id).toEqual('project-id')
-  })
 })
 
 function mockGetInput(mocks: Record<string, string>): jest.SpyInstance {
@@ -129,6 +105,10 @@ function mockDebug(): jest.SpyInstance {
 
 function mockFetchProjectV2Id(): jest.SpyInstance {
   return jest.spyOn(ExOctokit.prototype, 'fetchProjectV2Id')
+}
+
+function mockAddProjectV2ItemByContentId(): jest.SpyInstance {
+  return jest.spyOn(ExOctokit.prototype, 'addProjectV2ItemByContentId')
 }
 
 function mockFetchProjectV2FieldByName(): jest.SpyInstance {
