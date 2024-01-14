@@ -32,6 +32,16 @@ interface ProjectV2Field {
   }[]
 }
 
+interface AddProjectV2ItemByIdResponse {
+  addProjectV2ItemById: {
+    item: ProjectV2Item
+  } | null
+}
+
+interface ProjectV2Item {
+  id: string
+}
+
 export class ExOctokit {
   octokit: ReturnType<typeof getOctokit>
 
@@ -98,5 +108,27 @@ export class ExOctokit {
       )
 
     return projectV2FieldResponse.node?.field
+  }
+
+  async addProjectV2ItemByContentId(
+    projectV2Id: string,
+    contentId: string
+  ): Promise<ProjectV2Item | undefined> {
+    const addProjectV2ItemByIdResponse =
+      await this.octokit.graphql<AddProjectV2ItemByIdResponse>(
+        `mutation addProjectV2ItemById($projectV2Id: ID!, $contentId: ID!) {
+          addProjectV2ItemById(input: { projectId: $projectV2Id, contentId: $contentId }) {
+            item {
+              id
+            }
+          }
+        }`,
+        {
+          projectV2Id,
+          contentId
+        }
+      )
+
+    return addProjectV2ItemByIdResponse.addProjectV2ItemById?.item
   }
 }

@@ -123,6 +123,35 @@ describe('fetchProjectV2FieldByName', () => {
   })
 })
 
+describe('addProjectV2ItemById', () => {
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it('returns ProjectV2FieldItem', async () => {
+    mockGraphQL({
+      test: /addProjectV2ItemById/,
+      return: {
+        addProjectV2ItemById: {
+          item: {
+            id: 'item-id'
+          }
+        }
+      }
+    })
+
+    const exOctokit = new ExOctokit('gh_token')
+    const projectV2Item = await exOctokit.addProjectV2ItemByContentId(
+      'project-id',
+      'content-id'
+    )
+
+    expect(projectV2Item).toEqual({
+      id: 'item-id'
+    })
+  })
+})
+
 function mockGraphQL(...mocks: { test: RegExp; return: unknown }[]): jest.Mock {
   const mock = jest.fn().mockImplementation((query: string) => {
     const match = mocks.find(m => m.test.test(query))

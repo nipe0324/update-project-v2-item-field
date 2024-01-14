@@ -28962,6 +28962,19 @@ class ExOctokit {
         });
         return projectV2FieldResponse.node?.field;
     }
+    async addProjectV2ItemByContentId(projectV2Id, contentId) {
+        const addProjectV2ItemByIdResponse = await this.octokit.graphql(`mutation addProjectV2ItemById($projectV2Id: ID!, $contentId: ID!) {
+          addProjectV2ItemById(input: { projectId: $projectV2Id, contentId: $contentId }) {
+            item {
+              id
+            }
+          }
+        }`, {
+            projectV2Id,
+            contentId
+        });
+        return addProjectV2ItemByIdResponse.addProjectV2ItemById?.item;
+    }
 }
 exports.ExOctokit = ExOctokit;
 
