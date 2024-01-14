@@ -21,10 +21,12 @@ TODO
 - `github-token` **(required)** is a [personal access
   token](https://github.com/settings/tokens/new) with `repo` and `project` scopes.
 - `field-name` **(required)** is a field name of the project v2 item to update.
+  _note: Supported field types are `text`, `number`, `date` and `single_select`._
+- `field-value` **(required)** is a field value of the project v2 item to update.
 
 ## Outputs
 
-TODO
+- `item-id` is the ID of the project v2 updated item.
 
 ## Development
 

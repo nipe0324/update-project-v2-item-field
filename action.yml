@@ -12,7 +12,10 @@ inputs:
     description: A GitHub personal access token with write access to the project
   field-name:
     required: true
-    description: The name of the field to update
+    description: The name of the field to update. Supported field types are `text`, `number`, `date` and `single_select`
+  field-value:
+    required: true
+    description: The value of the field to update.
 
 outputs:
   projectId:

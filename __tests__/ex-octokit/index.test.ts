@@ -150,6 +150,73 @@ describe('addProjectV2ItemById', () => {
       id: 'item-id'
     })
   })
+
+  it('returns undefined when request failed', async () => {
+    mockGraphQL({
+      test: /addProjectV2ItemById/,
+      return: {
+        addProjectV2ItemById: null
+      }
+    })
+
+    const exOctokit = new ExOctokit('gh_token')
+    const projectV2Item = await exOctokit.addProjectV2ItemByContentId(
+      'project-id',
+      'content-id'
+    )
+
+    expect(projectV2Item).toBeUndefined()
+  })
+})
+
+describe('updateProjectV2ItemFieldValue', () => {
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it('returns ProjectV2FieldItem', async () => {
+    mockGraphQL({
+      test: /updateProjectV2ItemFieldValue/,
+      return: {
+        updateProjectV2ItemFieldValue: {
+          projectV2Item: {
+            id: 'item-id'
+          }
+        }
+      }
+    })
+
+    const exOctokit = new ExOctokit('gh_token')
+    const projectV2Item = await exOctokit.updateProjectV2ItemFieldValue(
+      'project-id',
+      'item-id',
+      'field-id',
+      { singleSelectOptionId: 'option-id' }
+    )
+
+    expect(projectV2Item).toEqual({
+      id: 'item-id'
+    })
+  })
+
+  it('returns undefined when request failed', async () => {
+    mockGraphQL({
+      test: /updateProjectV2ItemFieldValue/,
+      return: {
+        updateProjectV2ItemFieldValue: null
+      }
+    })
+
+    const exOctokit = new ExOctokit('gh_token')
+    const projectV2Item = await exOctokit.updateProjectV2ItemFieldValue(
+      'project-id',
+      'item-id',
+      'field-id',
+      { singleSelectOptionId: 'option-id' }
+    )
+
+    expect(projectV2Item).toBeUndefined()
+  })
 })
 
 function mockGraphQL(...mocks: { test: RegExp; return: unknown }[]): jest.Mock {

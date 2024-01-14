@@ -28920,7 +28920,7 @@ class ExOctokit {
         this.octokit = (0, github_1.getOctokit)(ghToken);
     }
     async fetchProjectV2Id(ownerTypeQuery, projectOwnerName, projectNumber) {
-        const projectV2IdResponse = await this.octokit.graphql(`query fetchProjectV2Id($projectOwnerName: String!, $projectNumber: Int!) {
+        const resp = await this.octokit.graphql(`query fetchProjectV2Id($projectOwnerName: String!, $projectNumber: Int!) {
         ${ownerTypeQuery}(login: $projectOwnerName) {
           projectV2(number: $projectNumber) {
             id
@@ -28930,50 +28930,74 @@ class ExOctokit {
             projectOwnerName,
             projectNumber
         });
-        return projectV2IdResponse[ownerTypeQuery]?.projectV2.id;
+        return resp[ownerTypeQuery]?.projectV2.id;
     }
-    // TODO: support 'ProjectV2IterationField' Type
     async fetchProjectV2FieldByName(projectV2Id, fieldName) {
-        const projectV2FieldResponse = await this.octokit.graphql(`query fetchProjectV2FieldByName($projectV2Id: ID!, $fieldName: String!) {
-          node(id: $projectV2Id) {
-            ... on ProjectV2 {
-              field(name: $fieldName) {
-                __typename
-                ... on ProjectV2Field {
+        const resp = await this.octokit.graphql(`query fetchProjectV2FieldByName($projectV2Id: ID!, $fieldName: String!) {
+        node(id: $projectV2Id) {
+          ... on ProjectV2 {
+            field(name: $fieldName) {
+              __typename
+              ... on ProjectV2Field {
+                id
+                name
+                dataType
+              }
+              ... on ProjectV2SingleSelectField {
+                id
+                name
+                dataType
+                options {
                   id
                   name
-                  dataType
-                }
-                ... on ProjectV2SingleSelectField {
-                  id
-                  name
-                  dataType
-                  options {
-                    id
-                    name
-                  }
                 }
               }
             }
           }
-        }`, {
+        }
+      }`, {
             projectV2Id,
             fieldName
         });
-        return projectV2FieldResponse.node?.field;
+        return resp.node?.field ?? undefined;
     }
     async addProjectV2ItemByContentId(projectV2Id, contentId) {
-        const addProjectV2ItemByIdResponse = await this.octokit.graphql(`mutation addProjectV2ItemById($projectV2Id: ID!, $contentId: ID!) {
-          addProjectV2ItemById(input: { projectId: $projectV2Id, contentId: $contentId }) {
-            item {
+        const resp = await this.octokit.graphql(`mutation addProjectV2ItemById($projectV2Id: ID!, $contentId: ID!) {
+        addProjectV2ItemById(input: { projectId: $projectV2Id, contentId: $contentId }) {
+          item {
+            id
+          }
+        }
+      }`, {
+            projectV2Id,
+            contentId
+        });
+        return resp.addProjectV2ItemById?.item;
+    }
+    async updateProjectV2ItemFieldValue(projectV2Id, itemId, fieldId, value) {
+        const resp = await this.octokit.graphql(`mutation updateProjectV2ItemFieldValue(
+          $projectV2Id: ID!,
+          $itemId: ID!,
+          $fieldId: ID!,
+          $value: ProjectV2FieldValue!
+        ) {
+          updateProjectV2ItemFieldValue(input: {
+            projectId: $projectV2Id,
+            itemId: $itemId,
+            fieldId: $fieldId,
+            value: $value
+          }) {
+            projectV2Item {
               id
             }
           }
         }`, {
             projectV2Id,
-            contentId
+            itemId,
+            fieldId,
+            value
         });
-        return addProjectV2ItemByIdResponse.addProjectV2ItemById?.item;
+        return resp.updateProjectV2ItemFieldValue?.projectV2Item;
     }
 }
 exports.ExOctokit = ExOctokit;
@@ -29072,6 +29096,7 @@ async function updateProjectV2ItemField() {
     const projectUrl = core.getInput('project-url', { required: true });
     const ghToken = core.getInput('github-token', { required: true });
     const fieldName = core.getInput('field-name', { required: true });
+    const fieldValue = core.getInput('field-value', { required: true });
     // Get the issue/PR owner name and node ID from payload
     const issue = github.context.payload.issue ?? github.context.payload.pull_request;
     // Validate and parse the project URL
@@ -29085,9 +29110,6 @@ async function updateProjectV2ItemField() {
     }
     const projectNumber = parseInt(urlMatch.groups?.projectNumber ?? '', 10);
     const ownerType = urlMatch.groups?.ownerType;
-    core.debug(`Project owner: ${projectOwnerName}`);
-    core.debug(`Project number: ${projectNumber}`);
-    core.debug(`Project owner type: ${ownerType}`);
     // Fetch the project node ID
     const exOctokit = new ex_octokit_1.ExOctokit(ghToken);
     const ownerTypeQuery = (0, utils_1.mustGetOwnerTypeQuery)(ownerType);
@@ -29106,14 +29128,39 @@ async function updateProjectV2ItemField() {
     if (!field) {
         throw new Error(`Field is not found: ${fieldName}`);
     }
-    // TODO: Update the field on the item
+    // Build the value by field data type
+    const value = buildFieldValue(field, fieldValue);
+    const updatedItem = await exOctokit.updateProjectV2ItemFieldValue(projectV2Id, item.id, field.id, value);
+    if (!updatedItem) {
+        throw new Error(`Failed to update item field value`);
+    }
     core.debug(`ProjectV2 ID: ${projectV2Id}`);
     core.debug(`Item ID: ${item.id}`);
     core.debug(`Field ID: ${field.id}`);
+    core.debug(`Field Value: ${JSON.stringify(value)}`);
     // Set outputs for other workflow steps to use
-    core.setOutput('projectV2Id', projectV2Id);
+    core.setOutput('itemId', updatedItem.id);
 }
 exports.updateProjectV2ItemField = updateProjectV2ItemField;
+function buildFieldValue(field, fieldValue) {
+    switch (field.dataType) {
+        case 'TEXT':
+            return { text: fieldValue };
+        case 'NUMBER':
+            return { number: Number(fieldValue) };
+        case 'DATE':
+            return { date: fieldValue };
+        case 'SINGLE_SELECT': {
+            const option = field.options?.find(o => o.name === fieldValue);
+            if (!option) {
+                throw new Error(`Option is not found: ${fieldValue}`);
+            }
+            return { singleSelectOptionId: option.id };
+        }
+        default:
+            throw new Error(`Unsupported field data type: ${field.dataType}`);
+    }
+}
 
 
 /***/ }),
