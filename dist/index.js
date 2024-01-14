@@ -28906,6 +28906,38 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
+/***/ 3562:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ExOctokit = void 0;
+const github_1 = __nccwpck_require__(5438);
+class ExOctokit {
+    octokit;
+    constructor(ghToken) {
+        this.octokit = (0, github_1.getOctokit)(ghToken);
+    }
+    async fetchProjectV2Id(ownerTypeQuery, projectOwnerName, projectNumber) {
+        const projectV2IdResponse = await this.octokit.graphql(`query getProject($projectOwnerName: String!, $projectNumber: Int!) {
+        ${ownerTypeQuery}(login: $projectOwnerName) {
+          projectV2(number: $projectNumber) {
+            id
+          }
+        }
+      }`, {
+            projectOwnerName,
+            projectNumber
+        });
+        return projectV2IdResponse[ownerTypeQuery]?.projectV2.id;
+    }
+}
+exports.ExOctokit = ExOctokit;
+
+
+/***/ }),
+
 /***/ 399:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -28990,6 +29022,7 @@ exports.updateProjectV2ItemField = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const utils_1 = __nccwpck_require__(1314);
+const ex_octokit_1 = __nccwpck_require__(3562);
 const urlParse = /\/(?<ownerType>orgs|users)\/(?<ownerName>[^/]+)\/projects\/(?<projectNumber>\d+)/;
 async function updateProjectV2ItemField() {
     // Get the action inputs
@@ -29003,30 +29036,23 @@ async function updateProjectV2ItemField() {
         throw new Error(`Invalid project URL: ${projectUrl}.`);
     }
     const projectOwnerName = urlMatch.groups?.ownerName;
+    if (!projectOwnerName) {
+        throw new Error(`ownerName is undefined`);
+    }
     const projectNumber = parseInt(urlMatch.groups?.projectNumber ?? '', 10);
     const ownerType = urlMatch.groups?.ownerType;
     core.debug(`Project owner: ${projectOwnerName}`);
     core.debug(`Project number: ${projectNumber}`);
     core.debug(`Project owner type: ${ownerType}`);
     // Fetch the project node ID
-    const octokit = github.getOctokit(ghToken);
+    const exOctokit = new ex_octokit_1.ExOctokit(ghToken);
     const ownerTypeQuery = (0, utils_1.mustGetOwnerTypeQuery)(ownerType);
-    const projectV2IdResponse = await octokit.graphql(`query getProject($projectOwnerName: String!, $projectNumber: Int!) {
-      ${ownerTypeQuery}(login: $projectOwnerName) {
-        projectV2(number: $projectNumber) {
-          id
-        }
-      }
-    }`, {
-        projectOwnerName,
-        projectNumber
-    });
-    const projectV2NodeId = projectV2IdResponse[ownerTypeQuery]?.projectV2.id;
+    const projectV2Id = await exOctokit.fetchProjectV2Id(ownerTypeQuery, projectOwnerName, projectNumber);
     const contentId = issue?.node_id;
-    core.debug(`ProjectV2 ID: ${projectV2NodeId}`);
+    core.debug(`ProjectV2 ID: ${projectV2Id}`);
     core.debug(`Content ID: ${contentId}`);
     // Set outputs for other workflow steps to use
-    core.setOutput('projectV2Id', projectV2NodeId);
+    core.setOutput('projectV2Id', projectV2Id);
     core.setOutput('contentId', contentId);
 }
 exports.updateProjectV2ItemField = updateProjectV2ItemField;
