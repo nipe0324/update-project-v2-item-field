@@ -20,7 +20,6 @@ TODO
   _eg: `https://github.com/orgs|users/<ownerName>/projects/<projectNumber>`_
 - `github-token` **(required)** is a [personal access
   token](https://github.com/settings/tokens/new) with `repo` and `project` scopes.
-  _See [Creating a PAT and adding it to your repository](#creating-a-pat-and-adding-it-to-your-repository) for more details_
 
 ## Outputs
 
