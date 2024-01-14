@@ -6,7 +6,7 @@ describe('fetchProjectV2Id', () => {
     jest.restoreAllMocks()
   })
 
-  test('fetch ProjectV2 ID from organization', async () => {
+  it('fetches ProjectV2 ID from organization', async () => {
     mockGraphQL({
       test: /getProject/,
       return: {
@@ -28,7 +28,7 @@ describe('fetchProjectV2Id', () => {
     expect(projectV2Id).toEqual('project-id')
   })
 
-  test('fetch ProjectV2 ID from user', async () => {
+  it('fetches ProjectV2 ID from user', async () => {
     mockGraphQL({
       test: /getProject/,
       return: {

@@ -25,7 +25,7 @@ describe('updateProjectV2ItemField', () => {
     jest.restoreAllMocks()
   })
 
-  test('sets an issue from the same organization to the project', async () => {
+  it('sets an issue from the same organization to the project', async () => {
     github.context.payload = {
       issue: {
         number: 1,
@@ -48,7 +48,7 @@ describe('updateProjectV2ItemField', () => {
     expect(outputs.projectV2Id).toEqual('project-id')
   })
 
-  test(`throws an error when url isn't a valid project url`, async () => {
+  it(`throws an error when url isn't a valid project url`, async () => {
     mockGetInput({
       'project-url': 'https://github.com/orgs/github/repositories',
       'github-token': 'gh_token'
@@ -78,7 +78,7 @@ describe('updateProjectV2ItemField', () => {
     expect(fetchProjectV2IdMock).not.toHaveBeenCalled()
   })
 
-  test(`works with URLs that are not under the github.com domain`, async () => {
+  it(`works with URLs that are not under the github.com domain`, async () => {
     github.context.payload = {
       issue: {
         number: 1,
