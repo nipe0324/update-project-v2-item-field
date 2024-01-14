@@ -10,6 +10,7 @@ export async function updateProjectV2ItemField(): Promise<void> {
   // Get the action inputs
   const projectUrl = core.getInput('project-url', { required: true })
   const ghToken = core.getInput('github-token', { required: true })
+  const fieldName = core.getInput('field-name', { required: true })
 
   // Get the issue/PR owner name and node ID from payload
   const issue =
@@ -40,9 +41,21 @@ export async function updateProjectV2ItemField(): Promise<void> {
     projectOwnerName,
     projectNumber
   )
+  if (!projectV2Id) {
+    throw new Error(`ProjectV2 ID is undefined`)
+  }
+
   const contentId = issue?.node_id
 
+  // Fetch the field node ID
+  const field = await exOctokit.fetchProjectV2FieldByName(
+    projectV2Id,
+    fieldName
+  )
+  const fieldId = field?.id
+
   core.debug(`ProjectV2 ID: ${projectV2Id}`)
+  core.debug(`Field ID: ${fieldId}`)
   core.debug(`Content ID: ${contentId}`)
 
   // Set outputs for other workflow steps to use

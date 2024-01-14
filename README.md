@@ -20,6 +20,7 @@ TODO
   _eg: `https://github.com/orgs|users/<ownerName>/projects/<projectNumber>`_
 - `github-token` **(required)** is a [personal access
   token](https://github.com/settings/tokens/new) with `repo` and `project` scopes.
+- `field-name` **(required)** is a field name of the project v2 item to update.
 
 ## Outputs
 

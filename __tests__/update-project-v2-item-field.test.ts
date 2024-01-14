@@ -6,6 +6,7 @@ import { ExOctokit } from '../src/ex-octokit'
 
 describe('updateProjectV2ItemField', () => {
   let outputs: Record<string, string>
+  let debug: jest.SpyInstance
 
   beforeEach(() => {
     jest.spyOn(process.stdout, 'write').mockImplementation(() => true)
@@ -17,6 +18,7 @@ describe('updateProjectV2ItemField', () => {
       'github-token': 'gh_token'
     })
 
+    debug = mockDebug()
     outputs = mockSetOutput()
   })
 
@@ -42,9 +44,12 @@ describe('updateProjectV2ItemField', () => {
     }
 
     mockFetchProjectV2Id().mockResolvedValue('project-id')
+    mockFetchProjectV2FieldByName().mockResolvedValue({ id: 'field-id' })
 
     await updateProjectV2ItemField()
 
+    expect(debug).toHaveBeenCalledWith('ProjectV2 ID: project-id')
+    expect(debug).toHaveBeenCalledWith('Field ID: field-id')
     expect(outputs.projectV2Id).toEqual('project-id')
   })
 
@@ -95,9 +100,12 @@ describe('updateProjectV2ItemField', () => {
     }
 
     mockFetchProjectV2Id().mockResolvedValue('project-id')
+    mockFetchProjectV2FieldByName().mockResolvedValue({ id: 'field-id' })
 
     await updateProjectV2ItemField()
 
+    expect(debug).toHaveBeenCalledWith('ProjectV2 ID: project-id')
+    expect(debug).toHaveBeenCalledWith('Field ID: field-id')
     expect(outputs.projectV2Id).toEqual('project-id')
   })
 })
@@ -115,6 +123,14 @@ function mockSetOutput(): Record<string, string> {
   return output
 }
 
+function mockDebug(): jest.SpyInstance {
+  return jest.spyOn(core, 'debug').mockImplementation()
+}
+
 function mockFetchProjectV2Id(): jest.SpyInstance {
   return jest.spyOn(ExOctokit.prototype, 'fetchProjectV2Id')
+}
+
+function mockFetchProjectV2FieldByName(): jest.SpyInstance {
+  return jest.spyOn(ExOctokit.prototype, 'fetchProjectV2FieldByName')
 }

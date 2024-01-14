@@ -61,7 +61,7 @@ describe('fetchProjectV2FieldByName', () => {
             __typename: 'ProjectV2Field',
             id: 'field-id',
             name: 'text-field',
-            dataType: 'TEXT',
+            dataType: 'TEXT'
           }
         }
       }
@@ -70,14 +70,14 @@ describe('fetchProjectV2FieldByName', () => {
     const exOctokit = new ExOctokit('gh_token')
     const projectV2Field = await exOctokit.fetchProjectV2FieldByName(
       'project-id',
-      'text-field',
+      'text-field'
     )
 
     expect(projectV2Field).toEqual({
       __typename: 'ProjectV2Field',
       id: 'field-id',
       name: 'text-field',
-      dataType: 'TEXT',
+      dataType: 'TEXT'
     })
   })
 
@@ -94,7 +94,7 @@ describe('fetchProjectV2FieldByName', () => {
             options: [
               {
                 id: 'option-id',
-                name: 'option-name',
+                name: 'option-name'
               }
             ]
           }
@@ -105,7 +105,7 @@ describe('fetchProjectV2FieldByName', () => {
     const exOctokit = new ExOctokit('gh_token')
     const projectV2Field = await exOctokit.fetchProjectV2FieldByName(
       'project-id',
-      'select-field',
+      'select-field'
     )
 
     expect(projectV2Field).toEqual({
@@ -116,7 +116,7 @@ describe('fetchProjectV2FieldByName', () => {
       options: [
         {
           id: 'option-id',
-          name: 'option-name',
+          name: 'option-name'
         }
       ]
     })

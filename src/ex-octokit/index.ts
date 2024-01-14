@@ -26,10 +26,10 @@ interface ProjectV2Field {
   name: string
   dataType: string
 
-  options?: Array<{
+  options?: {
     id: string
     name: string
-  }>
+  }[]
 }
 
 export class ExOctokit {
@@ -66,35 +66,36 @@ export class ExOctokit {
     projectV2Id: string,
     fieldName: string
   ): Promise<ProjectV2Field | null | undefined> {
-    const projectV2FieldResponse = await this.octokit.graphql<ProjectV2FieldResponse>(
-      `query fetchProjectV2FieldByName($projectOwnerName: String!, $fieldName: Int!) {
-        node(id: $projectV2Id) {
-          ... on ProjectV2 {
-            field(name: $fieldName) {
-              __typename
-              ... on ProjectV2Field {
-                id
-                name
-                dataType
-              }
-              ... on ProjectV2SingleSelectField {
-                id
-                name
-                dataType
-                options {
+    const projectV2FieldResponse =
+      await this.octokit.graphql<ProjectV2FieldResponse>(
+        `query fetchProjectV2FieldByName($projectOwnerName: String!, $fieldName: Int!) {
+          node(id: $projectV2Id) {
+            ... on ProjectV2 {
+              field(name: $fieldName) {
+                __typename
+                ... on ProjectV2Field {
                   id
                   name
+                  dataType
+                }
+                ... on ProjectV2SingleSelectField {
+                  id
+                  name
+                  dataType
+                  options {
+                    id
+                    name
+                  }
                 }
               }
             }
           }
+        }`,
+        {
+          projectV2Id,
+          fieldName
         }
-      }`,
-      {
-        projectV2Id,
-        fieldName
-      }
-    )
+      )
 
     return projectV2FieldResponse.node?.field
   }
