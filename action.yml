@@ -10,6 +10,9 @@ inputs:
   github-token:
     required: true
     description: A GitHub personal access token with write access to the project
+  field-name:
+    required: true
+    description: The name of the field to update
 
 outputs:
   projectId:
