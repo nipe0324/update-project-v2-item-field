@@ -10,7 +10,7 @@ A GitHub Actions to update the field of a GitHub project v2 item.
 
 ## Example Usage
 
-### After requesting a review, change the status to "In Review".
+### After requesting a review, change the status to "In Review"
 
 ```yml
 name: Update status to "In Review"
@@ -32,7 +32,7 @@ jobs:
           field-value: "In Review"
 ```
 
-### Set Current Date to "Closed Date" field when the issue is closed.
+### Set Current Date to "Closed Date" field when the issue is closed
 
 ```yml
 name: Set "Closed Date"
@@ -60,7 +60,7 @@ jobs:
           field-value: "${{ steps.current-date.outputs.date }}"
 ```
 
-Reference: Github Actions Triggers: https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows
+For GitHub Actions Triggers, see <https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows>.
 
 ## Inputs
 
@@ -91,7 +91,7 @@ The action supports the following field data types:
 
 ### Tokens
 
-Your token **has to be a classic PAT(Personal Access Token)**: the new fine-grained tokens do not work with the GraphQL API yet. You can create PAT from https://github.com/settings/tokens/new.
+Your token **has to be a classic PAT(Personal Access Token)**: the new fine-grained tokens do not work with the GraphQL API yet. You can create PAT from <https://github.com/settings/tokens/new>.
 
 The token should have the following scopes:
 
@@ -124,6 +124,6 @@ git tag v1.0.0
 
 Now, a release can be created from the branch containing the built action.
 
-# License
+## License
 
 The scripts and documentation in this project are released under the [MIT License](LICENSE)
