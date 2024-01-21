@@ -3,6 +3,7 @@ description: Automatically update a field on a GitHub project v2 item
 author: nipe0324
 branding:
   icon: table
+  color: green
 inputs:
   project-url:
     required: true
