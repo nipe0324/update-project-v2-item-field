@@ -28952,6 +28952,21 @@ class ExOctokit {
                   name
                 }
               }
+              ... on ProjectV2IterationField {
+                id
+                name
+                dataType
+                configuration {
+                  completedIterations {
+                    id
+                    title
+                  }
+                  iterations {
+                    id
+                    title
+                  }
+                }
+              }
             }
           }
         }
@@ -29156,6 +29171,15 @@ function buildFieldValue(field, fieldValue) {
                 throw new Error(`Option is not found: ${fieldValue}`);
             }
             return { singleSelectOptionId: option.id };
+        }
+        case 'ITERATION': {
+            const completedIteration = field.configuration?.completedIterations.find(i => i.title === fieldValue);
+            const iteration = field.configuration?.iterations.find(i => i.title === fieldValue);
+            const targetIteration = completedIteration ?? iteration;
+            if (!targetIteration) {
+                throw new Error(`Iteration is not found: ${fieldValue}`);
+            }
+            return { iterationId: targetIteration.id };
         }
         default:
             throw new Error(`Unsupported field data type: ${field.dataType}`);

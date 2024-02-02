@@ -36,12 +36,23 @@ export interface ProjectV2Field {
   __typename: 'ProjectV2Field' | 'ProjectV2SingleSelectField'
   id: string
   name: string
-  dataType: 'TEXT' | 'NUMBER' | 'DATE' | 'SINGLE_SELECT'
+  dataType: 'TEXT' | 'NUMBER' | 'DATE' | 'SINGLE_SELECT' | 'ITERATION'
 
   options?: {
     id: string
     name: string
   }[]
+
+  configuration?: {
+    completedIterations: {
+      id: string
+      title: string
+    }[]
+    iterations: {
+      id: string
+      title: string
+    }[]
+  }
 }
 
 export interface ProjectV2Item {
@@ -53,6 +64,7 @@ export type ProjectV2FieldValue =
   | { number: number }
   | { date: string }
   | { singleSelectOptionId: string }
+  | { iterationId: string }
 
 export class ExOctokit {
   octokit: ReturnType<typeof getOctokit>
@@ -105,6 +117,21 @@ export class ExOctokit {
                 options {
                   id
                   name
+                }
+              }
+              ... on ProjectV2IterationField {
+                id
+                name
+                dataType
+                configuration {
+                  completedIterations {
+                    id
+                    title
+                  }
+                  iterations {
+                    id
+                    title
+                  }
                 }
               }
             }

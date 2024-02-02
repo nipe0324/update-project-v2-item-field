@@ -4,11 +4,40 @@ A GitHub Actions to update the field of a GitHub project v2 item.
 
 ## Use Case
 
+- Set current iteration after open an issue
 - After requesting a review, change the status to "In Review".
 - Set Current Date to "Closed Date" field when the issue is closed.
 - [WIP] Calculate "Time to Close Days" to handle project management.
 
 ## Example Usage
+
+### Set current iteration after open an issue
+
+```yml
+name: Set current iteration
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  set-iteration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Get current iteration
+        id: current-iteration
+        # Note: Default timezone is UTC. Use TZ env to change timezone.
+        run: echo "title=$(date --date='last monday' +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      - name: Set current iteration
+        uses: nipe0324/update-project-v2-item-field@v1.1
+        with:
+          project-url: https://github.com/orgs|users/<ownerName>/projects/<projejctNumer>
+          github-token: ${{ secrets.UPDATE_PROJECT_V2_PAT }}
+          field-name: "Iteration"
+          # Each iteration title is formatted as "YYYY-MM-DD"
+          field-value: "${{ steps.current-iteration.outputs.title }}"
+```
 
 ### After requesting a review, change the status to "In Review"
 
@@ -24,7 +53,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Update status to "In Review"
-        uses: nipe0324/update-project-v2-item-field@v1.0
+        uses: nipe0324/update-project-v2-item-field@v1.1
         with:
           project-url: https://github.com/orgs|users/<ownerName>/projects/<projejctNumer>
           github-token: ${{ secrets.UPDATE_PROJECT_V2_PAT }}
@@ -87,7 +116,8 @@ The action supports the following field data types:
 |     Text      |     String       |         The literal string in the field. eg: `"Hello World"`   |
 |    Number     |     Float        |      The string representation of a number. eg: `"100.1"`      |
 |     Date      |      Date        |        The date in the YYYY-MM-DD format. eg: `"2024-01-01"`   |
-| Single Select |     String       | The name of the option (must be an exact match)                |
+| Single Select |     String       |      The name of the option (must be an exact match)           |
+|   Iteration   |     String       |      The name of the iteration (must be an exact match)        |
 
 ### Tokens
 
@@ -119,7 +149,7 @@ the "dist/" directory.
 
 ```shell
 npm run all
-git tag v1.0.1
+git tag v1.1.0
 ```
 
 Now, a release can be created from the branch containing the built action.

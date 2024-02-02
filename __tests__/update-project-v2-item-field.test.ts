@@ -13,12 +13,20 @@ describe('updateProjectV2ItemField', () => {
   })
 
   beforeEach(() => {
-    mockGetInput({
-      'project-url': 'https://github.com/orgs/nipe0324/projects/1',
-      'github-token': 'gh_token',
-      'field-name': 'Status',
-      'field-value': 'In Progress'
-    })
+    github.context.payload = {
+      issue: {
+        number: 1,
+        // eslint-disable-next-line camelcase
+        html_url:
+          'https://github.com/myorg/update-project-v2-item-field/issues/74'
+      },
+      repository: {
+        name: 'update-project-v2-item-field',
+        owner: {
+          login: 'myorg'
+        }
+      }
+    }
 
     debug = mockDebug()
     outputs = mockSetOutput()
@@ -29,27 +37,19 @@ describe('updateProjectV2ItemField', () => {
     jest.restoreAllMocks()
   })
 
-  it('updates project v2 item field by inputs', async () => {
-    github.context.payload = {
-      issue: {
-        number: 1,
-        // eslint-disable-next-line camelcase
-        html_url:
-          'https://github.com/myorg/update-project-v2-item-field/issues/74'
-      },
-      repository: {
-        name: 'update-project-v2-item-field',
-        owner: {
-          login: 'myorg'
-        }
-      }
-    }
+  it('updates project v2 TEXT item field', async () => {
+    mockGetInput({
+      'project-url': 'https://github.com/orgs/nipe0324/projects/1',
+      'github-token': 'gh_token',
+      'field-name': 'Open Date',
+      'field-value': '2024-02-01'
+    })
 
     mockFetchProjectV2Id().mockResolvedValue('project-id')
     mockAddProjectV2ItemByContentId().mockResolvedValue({ id: 'item-id' })
     mockFetchProjectV2FieldByName().mockResolvedValue({
       id: 'field-id',
-      dataType: 'TEXT'
+      dataType: 'DATE'
     })
     mockUpdateProjectV2ItemFieldValue().mockResolvedValue({ id: 'item-id' })
 
@@ -58,7 +58,71 @@ describe('updateProjectV2ItemField', () => {
     expect(debug).toHaveBeenCalledWith('ProjectV2 ID: project-id')
     expect(debug).toHaveBeenCalledWith('Item ID: item-id')
     expect(debug).toHaveBeenCalledWith('Field ID: field-id')
-    expect(debug).toHaveBeenCalledWith('Field Value: {"text":"In Progress"}')
+    expect(debug).toHaveBeenCalledWith('Field Value: {"date":"2024-02-01"}')
+    expect(outputs.itemId).toEqual('item-id')
+  })
+
+  it('updates project v2 SINGLE_SELECT item field', async () => {
+    mockGetInput({
+      'project-url': 'https://github.com/orgs/nipe0324/projects/1',
+      'github-token': 'gh_token',
+      'field-name': 'Status',
+      'field-value': 'Done'
+    })
+
+    mockFetchProjectV2Id().mockResolvedValue('project-id')
+    mockAddProjectV2ItemByContentId().mockResolvedValue({ id: 'item-id' })
+    mockFetchProjectV2FieldByName().mockResolvedValue({
+      id: 'field-id',
+      dataType: 'SINGLE_SELECT',
+      options: [
+        { id: '1', name: 'To Do' },
+        { id: '2', name: 'In Progress' },
+        { id: '3', name: 'Done' }
+      ]
+    })
+    mockUpdateProjectV2ItemFieldValue().mockResolvedValue({ id: 'item-id' })
+
+    await updateProjectV2ItemField()
+
+    expect(debug).toHaveBeenCalledWith('ProjectV2 ID: project-id')
+    expect(debug).toHaveBeenCalledWith('Item ID: item-id')
+    expect(debug).toHaveBeenCalledWith('Field ID: field-id')
+    expect(debug).toHaveBeenCalledWith(
+      'Field Value: {"singleSelectOptionId":"3"}'
+    )
+    expect(outputs.itemId).toEqual('item-id')
+  })
+
+  it('updates project v2 ITERATION item field', async () => {
+    mockGetInput({
+      'project-url': 'https://github.com/orgs/nipe0324/projects/1',
+      'github-token': 'gh_token',
+      'field-name': 'Iteration',
+      'field-value': 'Iteration 2'
+    })
+
+    mockFetchProjectV2Id().mockResolvedValue('project-id')
+    mockAddProjectV2ItemByContentId().mockResolvedValue({ id: 'item-id' })
+    mockFetchProjectV2FieldByName().mockResolvedValue({
+      id: 'field-id',
+      dataType: 'ITERATION',
+      configuration: {
+        completedIterations: [],
+        iterations: [
+          { id: '1', title: 'Iteration 1' },
+          { id: '2', title: 'Iteration 2' }
+        ]
+      }
+    })
+    mockUpdateProjectV2ItemFieldValue().mockResolvedValue({ id: 'item-id' })
+
+    await updateProjectV2ItemField()
+
+    expect(debug).toHaveBeenCalledWith('ProjectV2 ID: project-id')
+    expect(debug).toHaveBeenCalledWith('Item ID: item-id')
+    expect(debug).toHaveBeenCalledWith('Field ID: field-id')
+    expect(debug).toHaveBeenCalledWith('Field Value: {"iterationId":"2"}')
     expect(outputs.itemId).toEqual('item-id')
   })
 
@@ -67,21 +131,6 @@ describe('updateProjectV2ItemField', () => {
       'project-url': 'https://github.com/orgs/github/repositories',
       'github-token': 'gh_token'
     })
-
-    github.context.payload = {
-      issue: {
-        number: 1,
-        // eslint-disable-next-line camelcase
-        html_url:
-          'https://github.com/myorg/update-project-v2-item-field/issues/74'
-      },
-      repository: {
-        name: 'update-project-v2-item-field',
-        owner: {
-          login: 'myorg'
-        }
-      }
-    }
 
     await expect(updateProjectV2ItemField()).rejects.toThrow(
       'Invalid project URL: https://github.com/orgs/github/repositories.'
