@@ -149,7 +149,7 @@ the "dist/" directory.
 
 ```shell
 npm run all
-git tag v1.0.1
+git tag v1.1.0
 ```
 
 Now, a release can be created from the branch containing the built action.
