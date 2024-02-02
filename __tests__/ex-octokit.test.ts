@@ -121,6 +121,71 @@ describe('fetchProjectV2FieldByName', () => {
       ]
     })
   })
+
+  it('fetches field on ProjectV2IterationField', async () => {
+    mockGraphQL({
+      test: /fetchProjectV2FieldByName/,
+      return: {
+        node: {
+          field: {
+            __typename: 'ProjectV2IterationField',
+            id: 'field-id',
+            name: 'my-iteration',
+            dataType: 'ITERATION',
+            configuration: {
+              completedIterations: [
+                {
+                  id: 'iteration-id1',
+                  title: 'Iteration 1'
+                }
+              ],
+              iteration: [
+                {
+                  id: 'iteration-id2',
+                  title: 'Iteration 2'
+                },
+                {
+                  id: 'iteration-id3',
+                  title: 'Iteration 3'
+                }
+              ]
+            }
+          }
+        }
+      }
+    })
+
+    const exOctokit = new ExOctokit('gh_token')
+    const projectV2Field = await exOctokit.fetchProjectV2FieldByName(
+      'project-id',
+      'my-iteration'
+    )
+
+    expect(projectV2Field).toEqual({
+      __typename: 'ProjectV2IterationField',
+      id: 'field-id',
+      name: 'my-iteration',
+      dataType: 'ITERATION',
+      configuration: {
+        completedIterations: [
+          {
+            id: 'iteration-id1',
+            title: 'Iteration 1'
+          }
+        ],
+        iteration: [
+          {
+            id: 'iteration-id2',
+            title: 'Iteration 2'
+          },
+          {
+            id: 'iteration-id3',
+            title: 'Iteration 3'
+          }
+        ]
+      }
+    })
+  })
 })
 
 describe('addProjectV2ItemById', () => {
