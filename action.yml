@@ -13,7 +13,7 @@ inputs:
     description: A GitHub personal access token with write access to the project
   field-name:
     required: true
-    description: The name of the field to update. Supported field types are `text`, `number`, `date` and `single_select`
+    description: The name of the field to update. Supported field types are `text`, `number`, `date`, `single_select` and `iteration`
   field-value:
     required: true
     description: The value of the field to update.
