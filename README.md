@@ -30,7 +30,7 @@ jobs:
         run: echo "title=$(date --date='last monday' +'%Y-%m-%d')" >> $GITHUB_OUTPUT
 
       - name: Set current iteration
-        uses: nipe0324/update-project-v2-item-field@v1.1
+        uses: nipe0324/update-project-v2-item-field@v1.1.0
         with:
           project-url: https://github.com/orgs|users/<ownerName>/projects/<projejctNumer>
           github-token: ${{ secrets.UPDATE_PROJECT_V2_PAT }}
@@ -53,7 +53,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Update status to "In Review"
-        uses: nipe0324/update-project-v2-item-field@v1.1
+        uses: nipe0324/update-project-v2-item-field@v1.1.0
         with:
           project-url: https://github.com/orgs|users/<ownerName>/projects/<projejctNumer>
           github-token: ${{ secrets.UPDATE_PROJECT_V2_PAT }}
@@ -81,7 +81,7 @@ jobs:
           echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
 
       - name: Set "Closed Date"
-        uses: nipe0324/update-project-v2-item-field@main
+        uses: nipe0324/update-project-v2-item-field@v1.1.0
         with:
           project-url: https://github.com/orgs|users/<ownerName>/projects/<projejctNumer>
           github-token: ${{ secrets.UPDATE_PROJECT_V2_PAT }}
@@ -150,6 +150,7 @@ the "dist/" directory.
 ```shell
 npm run all
 git tag v1.1.0
+git tag push v1.1.0
 ```
 
 Now, a release can be created from the branch containing the built action.
