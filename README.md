@@ -130,7 +130,7 @@ References
 - `github-token` **(required)** is a [personal access
   token](https://github.com/settings/tokens/new) with `repo` and `project` scopes. [more detail](#tokens)
 - `field-name` **(required)** is a field name of the project v2 item to update.
-  - note: Supported field types are `text`, `number`, `date` and `single_select`.
+  - note: Supported field types are `text`, `number`, `date`, `single_select` and `iteration`.
 - `field-value` **(conditionally required)** is a field value of the project v2 item to update.
 - `field-value-script`: **(conditionally required)** is the that returns the value of the field to update.
   - note: `field-value` or `field-value-script` is required.
