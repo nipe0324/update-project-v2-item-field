@@ -29111,7 +29111,13 @@ async function updateProjectV2ItemField() {
     const projectUrl = core.getInput('project-url', { required: true });
     const ghToken = core.getInput('github-token', { required: true });
     const fieldName = core.getInput('field-name', { required: true });
-    const fieldValue = core.getInput('field-value', { required: true });
+    const fieldValue = core.getInput('field-value', { required: false });
+    const fieldValueScript = core.getInput('field-value-script', {
+        required: false
+    });
+    if (!fieldValue && !fieldValueScript) {
+        throw new Error('`field-value` or `field-value-script` is required.');
+    }
     // Get the issue/PR owner name and node ID from payload
     const issue = github.context.payload.issue ?? github.context.payload.pull_request;
     // Validate and parse the project URL
@@ -29121,7 +29127,7 @@ async function updateProjectV2ItemField() {
     }
     const projectOwnerName = urlMatch.groups?.ownerName;
     if (!projectOwnerName) {
-        throw new Error(`ownerName is undefined`);
+        throw new Error(`ownerName is undefined.`);
     }
     const projectNumber = parseInt(urlMatch.groups?.projectNumber ?? '', 10);
     const ownerType = urlMatch.groups?.ownerType;
