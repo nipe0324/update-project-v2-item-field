@@ -28906,6 +28906,24 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
+/***/ 9704:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+/* eslint-disable @typescript-eslint/promise-function-async */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.callAsyncFunction = void 0;
+const AsyncFunction = Object.getPrototypeOf(async () => null).constructor;
+function callAsyncFunction(args, source) {
+    const fn = new AsyncFunction(...Object.keys(args), source);
+    return fn(...Object.values(args));
+}
+exports.callAsyncFunction = callAsyncFunction;
+
+
+/***/ }),
+
 /***/ 6962:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -28981,6 +28999,51 @@ class ExOctokit {
         addProjectV2ItemById(input: { projectId: $projectV2Id, contentId: $contentId }) {
           item {
             id
+            fieldValues(first: 100) {
+              nodes {
+                __typename
+                ... on ProjectV2ItemFieldDateValue {
+                  field {
+                    ... on ProjectV2Field {
+                      name
+                    }
+                  }
+                  date
+                }
+                ... on ProjectV2ItemFieldIterationValue {
+                  field {
+                    ... on ProjectV2IterationField {
+                      name
+                    }
+                  }
+                  title
+                }
+                ... on ProjectV2ItemFieldNumberValue {
+                  field {
+                    ... on ProjectV2Field {
+                      name
+                    }
+                  }
+                  number
+                }
+                ... on ProjectV2ItemFieldSingleSelectValue {
+                  field {
+                    ... on ProjectV2SingleSelectField {
+                      name
+                    }
+                  }
+                  name
+                }
+                ... on ProjectV2ItemFieldTextValue {
+                  field {
+                    ... on ProjectV2Field {
+                      name
+                    }
+                  }
+                  text
+                }
+              }
+            }
           }
         }
       }`, {
@@ -28989,7 +29052,7 @@ class ExOctokit {
         });
         return resp.addProjectV2ItemById?.item;
     }
-    async updateProjectV2ItemFieldValue(projectV2Id, itemId, fieldId, value) {
+    async updateProjectV2ItemFieldValue(projectV2Id, itemId, fieldId, projectV2FieldValue) {
         const resp = await this.octokit.graphql(`mutation updateProjectV2ItemFieldValue(
           $projectV2Id: ID!,
           $itemId: ID!,
@@ -29010,12 +29073,62 @@ class ExOctokit {
             projectV2Id,
             itemId,
             fieldId,
-            value
+            value: projectV2FieldValue
         });
         return resp.updateProjectV2ItemFieldValue?.projectV2Item;
     }
 }
 exports.ExOctokit = ExOctokit;
+
+
+/***/ }),
+
+/***/ 6960:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Item = void 0;
+class Item {
+    id;
+    fieldValues;
+    constructor(id, fieldValues) {
+        this.id = id;
+        this.fieldValues = fieldValues;
+    }
+    static fromGraphQL(data) {
+        const nodes = data.fieldValues?.nodes ?? [];
+        const fieldValues = {};
+        for (const node of nodes) {
+            const fieldName = node.field?.name;
+            if (!fieldName)
+                continue;
+            switch (node.__typename) {
+                case 'ProjectV2ItemFieldDateValue':
+                    fieldValues[fieldName] = node.date;
+                    break;
+                case 'ProjectV2ItemFieldIterationValue':
+                    fieldValues[fieldName] = node.title;
+                    break;
+                case 'ProjectV2ItemFieldNumberValue':
+                    fieldValues[fieldName] = node.number;
+                    break;
+                case 'ProjectV2ItemFieldSingleSelectValue':
+                    fieldValues[fieldName] = node.name;
+                    break;
+                case 'ProjectV2ItemFieldTextValue':
+                    fieldValues[fieldName] = node.text;
+                    break;
+                default:
+                    break; // not support other types
+            }
+        }
+        return new Item(data.id, fieldValues);
+    }
+}
+exports.Item = Item;
 
 
 /***/ }),
@@ -29102,18 +29215,26 @@ var __importStar = (this && this.__importStar) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.updateProjectV2ItemField = void 0;
 const core = __importStar(__nccwpck_require__(2186));
-const github = __importStar(__nccwpck_require__(5438));
+const github_1 = __nccwpck_require__(5438);
+const async_function_1 = __nccwpck_require__(9704);
 const utils_1 = __nccwpck_require__(1314);
 const ex_octokit_1 = __nccwpck_require__(6962);
+const item_1 = __nccwpck_require__(6960);
 const urlParse = /\/(?<ownerType>orgs|users)\/(?<ownerName>[^/]+)\/projects\/(?<projectNumber>\d+)/;
 async function updateProjectV2ItemField() {
     // Get the action inputs
     const projectUrl = core.getInput('project-url', { required: true });
     const ghToken = core.getInput('github-token', { required: true });
     const fieldName = core.getInput('field-name', { required: true });
-    const fieldValue = core.getInput('field-value', { required: true });
+    const fieldValue = core.getInput('field-value', { required: false });
+    const fieldValueScript = core.getInput('field-value-script', {
+        required: false
+    });
+    if (fieldValue === '' && fieldValueScript === '') {
+        throw new Error('`field-value` or `field-value-script` is required.');
+    }
     // Get the issue/PR owner name and node ID from payload
-    const issue = github.context.payload.issue ?? github.context.payload.pull_request;
+    const issue = github_1.context.payload.issue ?? github_1.context.payload.pull_request;
     // Validate and parse the project URL
     const urlMatch = projectUrl.match(urlParse);
     if (!urlMatch) {
@@ -29121,7 +29242,7 @@ async function updateProjectV2ItemField() {
     }
     const projectOwnerName = urlMatch.groups?.ownerName;
     if (!projectOwnerName) {
-        throw new Error(`ownerName is undefined`);
+        throw new Error(`ownerName is undefined.`);
     }
     const projectNumber = parseInt(urlMatch.groups?.projectNumber ?? '', 10);
     const ownerType = urlMatch.groups?.ownerType;
@@ -29134,50 +29255,54 @@ async function updateProjectV2ItemField() {
     }
     const contentId = issue?.node_id;
     // Add the issue/PR to the project and get item
-    const item = await exOctokit.addProjectV2ItemByContentId(projectV2Id, contentId);
-    if (!item) {
+    const itemData = await exOctokit.addProjectV2ItemByContentId(projectV2Id, contentId);
+    if (!itemData) {
         throw new Error(`Failed to add item to project`);
     }
+    const item = item_1.Item.fromGraphQL(itemData);
     // Fetch the field node ID
     const field = await exOctokit.fetchProjectV2FieldByName(projectV2Id, fieldName);
     if (!field) {
         throw new Error(`Field is not found: ${fieldName}`);
     }
     // Build the value by field data type
-    const value = buildFieldValue(field, fieldValue);
-    const updatedItem = await exOctokit.updateProjectV2ItemFieldValue(projectV2Id, item.id, field.id, value);
+    const value = fieldValue !== ''
+        ? fieldValue
+        : String(await (0, async_function_1.callAsyncFunction)({ context: github_1.context, item }, fieldValueScript));
+    const projectV2FieldValue = buildProjectV2FieldValue(field, value);
+    const updatedItem = await exOctokit.updateProjectV2ItemFieldValue(projectV2Id, item.id, field.id, projectV2FieldValue);
     if (!updatedItem) {
         throw new Error(`Failed to update item field value`);
     }
     core.debug(`ProjectV2 ID: ${projectV2Id}`);
     core.debug(`Item ID: ${item.id}`);
     core.debug(`Field ID: ${field.id}`);
-    core.debug(`Field Value: ${JSON.stringify(value)}`);
+    core.debug(`Field Value: ${JSON.stringify(projectV2FieldValue)}`);
     // Set outputs for other workflow steps to use
     core.setOutput('itemId', updatedItem.id);
 }
 exports.updateProjectV2ItemField = updateProjectV2ItemField;
-function buildFieldValue(field, fieldValue) {
+function buildProjectV2FieldValue(field, value) {
     switch (field.dataType) {
         case 'TEXT':
-            return { text: fieldValue };
+            return { text: value };
         case 'NUMBER':
-            return { number: Number(fieldValue) };
+            return { number: Number(value) };
         case 'DATE':
-            return { date: fieldValue };
+            return { date: value };
         case 'SINGLE_SELECT': {
-            const option = field.options?.find(o => o.name === fieldValue);
+            const option = field.options?.find(o => o.name === value);
             if (!option) {
-                throw new Error(`Option is not found: ${fieldValue}`);
+                throw new Error(`Option is not found: ${value}`);
             }
             return { singleSelectOptionId: option.id };
         }
         case 'ITERATION': {
-            const completedIteration = field.configuration?.completedIterations.find(i => i.title === fieldValue);
-            const iteration = field.configuration?.iterations.find(i => i.title === fieldValue);
+            const completedIteration = field.configuration?.completedIterations.find(i => i.title === value);
+            const iteration = field.configuration?.iterations.find(i => i.title === value);
             const targetIteration = completedIteration ?? iteration;
             if (!targetIteration) {
-                throw new Error(`Iteration is not found: ${fieldValue}`);
+                throw new Error(`Iteration is not found: ${value}`);
             }
             return { iterationId: targetIteration.id };
         }

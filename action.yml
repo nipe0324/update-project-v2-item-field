@@ -15,8 +15,11 @@ inputs:
     required: true
     description: The name of the field to update. Supported field types are `text`, `number`, `date`, `single_select` and `iteration`
   field-value:
-    required: true
-    description: The value of the field to update.
+    required: false
+    description: The value of the field to update. (`field-value` or `field-value-script` is required)
+  field-value-script:
+    required: false
+    description: The script that returns the value of the field to update. (`field-value` or `field-value-script` is required)
 
 outputs:
   projectId:

@@ -41,15 +41,15 @@ describe('updateProjectV2ItemField', () => {
     mockGetInput({
       'project-url': 'https://github.com/orgs/nipe0324/projects/1',
       'github-token': 'gh_token',
-      'field-name': 'Open Date',
-      'field-value': '2024-02-01'
+      'field-name': 'Text Input Field',
+      'field-value': 'Hello, World!'
     })
 
     mockFetchProjectV2Id().mockResolvedValue('project-id')
     mockAddProjectV2ItemByContentId().mockResolvedValue({ id: 'item-id' })
     mockFetchProjectV2FieldByName().mockResolvedValue({
       id: 'field-id',
-      dataType: 'DATE'
+      dataType: 'TEXT'
     })
     mockUpdateProjectV2ItemFieldValue().mockResolvedValue({ id: 'item-id' })
 
@@ -58,7 +58,7 @@ describe('updateProjectV2ItemField', () => {
     expect(debug).toHaveBeenCalledWith('ProjectV2 ID: project-id')
     expect(debug).toHaveBeenCalledWith('Item ID: item-id')
     expect(debug).toHaveBeenCalledWith('Field ID: field-id')
-    expect(debug).toHaveBeenCalledWith('Field Value: {"date":"2024-02-01"}')
+    expect(debug).toHaveBeenCalledWith('Field Value: {"text":"Hello, World!"}')
     expect(outputs.itemId).toEqual('item-id')
   })
 
@@ -126,10 +126,66 @@ describe('updateProjectV2ItemField', () => {
     expect(outputs.itemId).toEqual('item-id')
   })
 
+  it('updates project v2 DATE item field by field-value-script', async () => {
+    mockGetInput({
+      'project-url': 'https://github.com/orgs/nipe0324/projects/1',
+      'github-token': 'gh_token',
+      'field-name': 'My Date Field',
+      'field-value-script': `
+        const date = new Date(item.fieldValues['My Date Field'])
+        date.setDate(date.getDate() + 1)
+        return date.toISOString().split('T')[0]
+      `
+    })
+
+    mockFetchProjectV2Id().mockResolvedValue('project-id')
+    mockAddProjectV2ItemByContentId().mockResolvedValue({
+      id: 'item-id',
+      fieldValues: {
+        nodes: [
+          {
+            __typename: 'ProjectV2ItemFieldDateValue',
+            field: {
+              name: 'My Date Field'
+            },
+            date: '2024-02-01'
+          }
+        ]
+      }
+    })
+    mockFetchProjectV2FieldByName().mockResolvedValue({
+      id: 'field-id',
+      dataType: 'DATE'
+    })
+    mockUpdateProjectV2ItemFieldValue().mockResolvedValue({ id: 'item-id' })
+
+    await updateProjectV2ItemField()
+
+    expect(debug).toHaveBeenCalledWith('ProjectV2 ID: project-id')
+    expect(debug).toHaveBeenCalledWith('Item ID: item-id')
+    expect(debug).toHaveBeenCalledWith('Field ID: field-id')
+    expect(debug).toHaveBeenCalledWith(`Field Value: {"date":"2024-02-02"}`)
+    expect(outputs.itemId).toEqual('item-id')
+  })
+
+  it(`throws an error when field-value and field-value-script are blank`, async () => {
+    mockGetInput({
+      'project-url': 'https://github.com/orgs/nipe0324/projects/1',
+      'github-token': 'gh_token',
+      'field-name': 'Text Input Field'
+    })
+
+    await expect(updateProjectV2ItemField()).rejects.toThrow(
+      '`field-value` or `field-value-script` is required.'
+    )
+  })
+
   it(`throws an error when url isn't a valid project url`, async () => {
     mockGetInput({
       'project-url': 'https://github.com/orgs/github/repositories',
-      'github-token': 'gh_token'
+      'github-token': 'gh_token',
+      'field-name': 'Text Input Field',
+      'field-value': 'Hello, World!'
     })
 
     await expect(updateProjectV2ItemField()).rejects.toThrow(
