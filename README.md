@@ -6,8 +6,7 @@ A GitHub Actions to update the field of a GitHub project v2 item.
 
 - Set current iteration after open an issue
 - After requesting a review, change the status to "In Review".
-- Set Current Date to "Closed Date" field when the issue is closed.
-- [WIP] Calculate "Time to Close Days" to handle project management.
+- Calculate "Time to Close Days" to handle project management.
 
 ## Example Usage
 
@@ -30,7 +29,7 @@ jobs:
         run: echo "title=$(date --date='last monday' +'%Y-%m-%d')" >> $GITHUB_OUTPUT
 
       - name: Set current iteration
-        uses: nipe0324/update-project-v2-item-field@v1.1.0
+        uses: nipe0324/update-project-v2-item-field@v1.2.0
         with:
           project-url: https://github.com/orgs|users/<ownerName>/projects/<projejctNumer>
           github-token: ${{ secrets.UPDATE_PROJECT_V2_PAT }}
@@ -53,7 +52,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Update status to "In Review"
-        uses: nipe0324/update-project-v2-item-field@v1.1.0
+        uses: nipe0324/update-project-v2-item-field@v1.2.0
         with:
           project-url: https://github.com/orgs|users/<ownerName>/projects/<projejctNumer>
           github-token: ${{ secrets.UPDATE_PROJECT_V2_PAT }}
@@ -61,16 +60,16 @@ jobs:
           field-value: "In Review"
 ```
 
-### Set Current Date to "Closed Date" field when the issue is closed
+### Calculate "Time to Close Days" to handle project management
 
 ```yml
-name: Set "Closed Date"
+name: Project Lead Time Automation
 on:
   issues:
-    types: [closed]
+    types: [opened closed]
 
 jobs:
-  set-closed-date:
+  lead-time-automation:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -80,16 +79,46 @@ jobs:
         run: |
           echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
 
-      - name: Set "Closed Date"
-        uses: nipe0324/update-project-v2-item-field@v1.1.0
+      - name: Set "Start Date" when issue opened
+        if: ${{ github.event.action == 'opened'}}
+        uses: nipe0324/update-project-v2-item-field@v1.2.0
         with:
           project-url: https://github.com/orgs|users/<ownerName>/projects/<projejctNumer>
           github-token: ${{ secrets.UPDATE_PROJECT_V2_PAT }}
-          field-name: "Closed Date"
+          field-name: "Start Date"
           field-value: "${{ steps.current-date.outputs.date }}"
+
+      - name: Set "End Date" when issue closed
+        if: ${{ github.event.action == 'closed'}}
+        uses: nipe0324/update-project-v2-item-field@v1.2.0
+        with:
+          project-url: https://github.com/orgs|users/<ownerName>/projects/<projejctNumer>
+          github-token: ${{ secrets.UPDATE_PROJECT_V2_PAT }}
+          field-name: "End Date"
+          field-value: "${{ steps.current-date.outputs.date }}"
+
+      - name: Calculate "Time to Close Days"
+        if: ${{ github.event.action == 'closed'}}
+        uses: nipe0324/update-project-v2-item-field@v1.2.0
+        with:
+          project-url: https://github.com/orgs|users/<ownerName>/projects/<projejctNumer>
+          github-token: ${{ secrets.UPDATE_PROJECT_V2_PAT }}
+          field-name: "Time to Close Days"
+          # https://docs.github.com/ja/graphql/reference/objects#projectv2item
+          # inspired by https://github.com/actions/github-script/tree/main?tab=readme-ov-file
+          field-value-script: |
+            const timeToCloseDays = item.fieldValueByName('Time to Close Days')
+            if (timeToCloseDays) {
+              return timeToCloseDays
+            }
+
+            const startDate = item.fieldValueByName('Start Date')
+            const endDate = item.fieldValueByName('End Date')
+            return Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24)
 ```
 
 For GitHub Actions Triggers, see <https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows>.
+For workflow events and payload, see <https://docs.github.com/en/webhooks/webhook-events-and-payloads>
 
 ## Inputs
 
@@ -98,8 +127,10 @@ For GitHub Actions Triggers, see <https://docs.github.com/en/actions/using-workf
 - `github-token` **(required)** is a [personal access
   token](https://github.com/settings/tokens/new) with `repo` and `project` scopes. [more detail](#tokens)
 - `field-name` **(required)** is a field name of the project v2 item to update.
-  _note: Supported field types are `text`, `number`, `date` and `single_select`._
-- `field-value` **(required)** is a field value of the project v2 item to update.
+  - note: Supported field types are `text`, `number`, `date` and `single_select`.
+- `field-value` **(conditionally required)** is a field value of the project v2 item to update.
+- `field-value-script`: **(conditionally required)** is the that returns the value of the field to update.
+  - note: `field-value` or `field-value-script` is required.
 
 ## Outputs
 
@@ -149,8 +180,8 @@ the "dist/" directory.
 
 ```shell
 npm run all
-git tag v1.1.0
-git tag push v1.1.0
+git tag v1.2.0
+git tag push v1.2.0
 ```
 
 Now, a release can be created from the branch containing the built action.
