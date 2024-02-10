@@ -132,13 +132,27 @@ describe('updateProjectV2ItemField', () => {
       'github-token': 'gh_token',
       'field-name': 'My Date Field',
       'field-value-script': `
-        const date = new Date()
+        const date = new Date(item.fieldValues['My Date Field'])
+        date.setDate(date.getDate() + 1)
         return date.toISOString().split('T')[0]
       `
     })
 
     mockFetchProjectV2Id().mockResolvedValue('project-id')
-    mockAddProjectV2ItemByContentId().mockResolvedValue({ id: 'item-id' })
+    mockAddProjectV2ItemByContentId().mockResolvedValue({
+      id: 'item-id',
+      fieldValues: {
+        nodes: [
+          {
+            __typename: 'ProjectV2ItemFieldDateValue',
+            field: {
+              name: 'My Date Field'
+            },
+            date: '2024-02-01'
+          }
+        ]
+      }
+    })
     mockFetchProjectV2FieldByName().mockResolvedValue({
       id: 'field-id',
       dataType: 'DATE'
@@ -150,9 +164,7 @@ describe('updateProjectV2ItemField', () => {
     expect(debug).toHaveBeenCalledWith('ProjectV2 ID: project-id')
     expect(debug).toHaveBeenCalledWith('Item ID: item-id')
     expect(debug).toHaveBeenCalledWith('Field ID: field-id')
-    expect(debug).toHaveBeenCalledWith(
-      `Field Value: {"date":"${new Date().toISOString().split('T')[0]}"}`
-    )
+    expect(debug).toHaveBeenCalledWith(`Field Value: {"date":"2024-02-02"}`)
     expect(outputs.itemId).toEqual('item-id')
   })
 

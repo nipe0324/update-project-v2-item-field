@@ -261,7 +261,7 @@ export class ExOctokit {
           projectV2Id,
           itemId,
           fieldId,
-          projectV2FieldValue
+          value: projectV2FieldValue
         }
       )
 

@@ -85,7 +85,7 @@ jobs:
         with:
           project-url: https://github.com/orgs|users/<ownerName>/projects/<projejctNumer>
           github-token: ${{ secrets.UPDATE_PROJECT_V2_PAT }}
-          field-name: "Start Date"
+          field-name: "Start Date" # Field Type: Date
           field-value: "${{ steps.current-date.outputs.date }}"
 
       - name: Set "End Date" when issue closed
@@ -94,7 +94,7 @@ jobs:
         with:
           project-url: https://github.com/orgs|users/<ownerName>/projects/<projejctNumer>
           github-token: ${{ secrets.UPDATE_PROJECT_V2_PAT }}
-          field-name: "End Date"
+          field-name: "End Date" # Field Type: Date
           field-value: "${{ steps.current-date.outputs.date }}"
 
       - name: Calculate "Time to Close Days"
@@ -103,18 +103,18 @@ jobs:
         with:
           project-url: https://github.com/orgs|users/<ownerName>/projects/<projejctNumer>
           github-token: ${{ secrets.UPDATE_PROJECT_V2_PAT }}
-          field-name: "Time to Close Days"
-          # https://docs.github.com/ja/graphql/reference/objects#projectv2item
-          # inspired by https://github.com/actions/github-script/tree/main?tab=readme-ov-file
+          field-name: "Time to Close Days" # Field Type: Number
+          # Note: you can access `context` and `item`. see `type AsyncFunctionArguments`.
           field-value-script: |
-            const timeToCloseDays = item.fields('Time to Close Days')
+            const timeToCloseDays = item.fieldValues['Time to Close Days']
             if (timeToCloseDays) {
               return timeToCloseDays
             }
 
-            const startDate = item.fields('Start Date')
-            const endDate = item.fields('End Date')
-            return Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24)
+            const startDate = new Date(item.fieldValues['Start Date'])
+            const endDate = new Date(item.fieldValues['End Date'])
+            const diff = (endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24)
+            return Math.round(diff)
 ```
 
 References

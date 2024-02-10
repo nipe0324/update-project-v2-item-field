@@ -3,6 +3,7 @@ import { context } from '@actions/github'
 import { callAsyncFunction } from './async-function'
 import { mustGetOwnerTypeQuery } from './utils'
 import { ExOctokit } from './ex-octokit'
+import { Item } from './item'
 
 import type { ProjectV2Field, ProjectV2FieldValue } from './ex-octokit'
 
@@ -54,13 +55,15 @@ export async function updateProjectV2ItemField(): Promise<void> {
   const contentId = issue?.node_id
 
   // Add the issue/PR to the project and get item
-  const item = await exOctokit.addProjectV2ItemByContentId(
+  const itemData = await exOctokit.addProjectV2ItemByContentId(
     projectV2Id,
     contentId
   )
-  if (!item) {
+  if (!itemData) {
     throw new Error(`Failed to add item to project`)
   }
+
+  const item = Item.fromGraphQL(itemData)
 
   // Fetch the field node ID
   const field = await exOctokit.fetchProjectV2FieldByName(
@@ -75,7 +78,7 @@ export async function updateProjectV2ItemField(): Promise<void> {
   const value =
     fieldValue !== ''
       ? fieldValue
-      : String(await callAsyncFunction({ context }, fieldValueScript))
+      : String(await callAsyncFunction({ context, item }, fieldValueScript))
   const projectV2FieldValue = buildProjectV2FieldValue(field, value)
   const updatedItem = await exOctokit.updateProjectV2ItemFieldValue(
     projectV2Id,

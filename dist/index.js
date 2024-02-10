@@ -29073,12 +29073,62 @@ class ExOctokit {
             projectV2Id,
             itemId,
             fieldId,
-            projectV2FieldValue
+            value: projectV2FieldValue
         });
         return resp.updateProjectV2ItemFieldValue?.projectV2Item;
     }
 }
 exports.ExOctokit = ExOctokit;
+
+
+/***/ }),
+
+/***/ 6960:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Item = void 0;
+class Item {
+    id;
+    fieldValues;
+    constructor(id, fieldValues) {
+        this.id = id;
+        this.fieldValues = fieldValues;
+    }
+    static fromGraphQL(data) {
+        const nodes = data.fieldValues?.nodes ?? [];
+        const fieldValues = {};
+        for (const node of nodes) {
+            const fieldName = node.field?.name;
+            if (!fieldName)
+                continue;
+            switch (node.__typename) {
+                case 'ProjectV2ItemFieldDateValue':
+                    fieldValues[fieldName] = node.date;
+                    break;
+                case 'ProjectV2ItemFieldIterationValue':
+                    fieldValues[fieldName] = node.title;
+                    break;
+                case 'ProjectV2ItemFieldNumberValue':
+                    fieldValues[fieldName] = node.number;
+                    break;
+                case 'ProjectV2ItemFieldSingleSelectValue':
+                    fieldValues[fieldName] = node.name;
+                    break;
+                case 'ProjectV2ItemFieldTextValue':
+                    fieldValues[fieldName] = node.text;
+                    break;
+                default:
+                    break; // not support other types
+            }
+        }
+        return new Item(data.id, fieldValues);
+    }
+}
+exports.Item = Item;
 
 
 /***/ }),
@@ -29169,6 +29219,7 @@ const github_1 = __nccwpck_require__(5438);
 const async_function_1 = __nccwpck_require__(9704);
 const utils_1 = __nccwpck_require__(1314);
 const ex_octokit_1 = __nccwpck_require__(6962);
+const item_1 = __nccwpck_require__(6960);
 const urlParse = /\/(?<ownerType>orgs|users)\/(?<ownerName>[^/]+)\/projects\/(?<projectNumber>\d+)/;
 async function updateProjectV2ItemField() {
     // Get the action inputs
@@ -29204,10 +29255,11 @@ async function updateProjectV2ItemField() {
     }
     const contentId = issue?.node_id;
     // Add the issue/PR to the project and get item
-    const item = await exOctokit.addProjectV2ItemByContentId(projectV2Id, contentId);
-    if (!item) {
+    const itemData = await exOctokit.addProjectV2ItemByContentId(projectV2Id, contentId);
+    if (!itemData) {
         throw new Error(`Failed to add item to project`);
     }
+    const item = item_1.Item.fromGraphQL(itemData);
     // Fetch the field node ID
     const field = await exOctokit.fetchProjectV2FieldByName(projectV2Id, fieldName);
     if (!field) {
@@ -29216,7 +29268,7 @@ async function updateProjectV2ItemField() {
     // Build the value by field data type
     const value = fieldValue !== ''
         ? fieldValue
-        : String(await (0, async_function_1.callAsyncFunction)({ context: github_1.context }, fieldValueScript));
+        : String(await (0, async_function_1.callAsyncFunction)({ context: github_1.context, item }, fieldValueScript));
     const projectV2FieldValue = buildProjectV2FieldValue(field, value);
     const updatedItem = await exOctokit.updateProjectV2ItemFieldValue(projectV2Id, item.id, field.id, projectV2FieldValue);
     if (!updatedItem) {
