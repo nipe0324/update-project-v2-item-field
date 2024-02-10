@@ -172,7 +172,7 @@ export class ExOctokit {
     projectV2Id: string,
     itemId: string,
     fieldId: string,
-    value: ProjectV2FieldValue
+    projectV2FieldValue: ProjectV2FieldValue
   ): Promise<ProjectV2Item | undefined> {
     const resp =
       await this.octokit.graphql<UpdateProjectV2ItemFieldValueResponse>(
@@ -197,7 +197,7 @@ export class ExOctokit {
           projectV2Id,
           itemId,
           fieldId,
-          value
+          projectV2FieldValue
         }
       )
 

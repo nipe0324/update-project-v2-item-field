@@ -126,6 +126,36 @@ describe('updateProjectV2ItemField', () => {
     expect(outputs.itemId).toEqual('item-id')
   })
 
+  it('updates project v2 DATE item field by field-value-script', async () => {
+    mockGetInput({
+      'project-url': 'https://github.com/orgs/nipe0324/projects/1',
+      'github-token': 'gh_token',
+      'field-name': 'My Date Field',
+      'field-value-script': `
+        const date = new Date()
+        return date.toISOString().split('T')[0]
+      `
+    })
+
+    mockFetchProjectV2Id().mockResolvedValue('project-id')
+    mockAddProjectV2ItemByContentId().mockResolvedValue({ id: 'item-id' })
+    mockFetchProjectV2FieldByName().mockResolvedValue({
+      id: 'field-id',
+      dataType: 'DATE'
+    })
+    mockUpdateProjectV2ItemFieldValue().mockResolvedValue({ id: 'item-id' })
+
+    await updateProjectV2ItemField()
+
+    expect(debug).toHaveBeenCalledWith('ProjectV2 ID: project-id')
+    expect(debug).toHaveBeenCalledWith('Item ID: item-id')
+    expect(debug).toHaveBeenCalledWith('Field ID: field-id')
+    expect(debug).toHaveBeenCalledWith(
+      `Field Value: {"date":"${new Date().toISOString().split('T')[0]}"}`
+    )
+    expect(outputs.itemId).toEqual('item-id')
+  })
+
   it(`throws an error when field-value and field-value-script are blank`, async () => {
     mockGetInput({
       'project-url': 'https://github.com/orgs/nipe0324/projects/1',

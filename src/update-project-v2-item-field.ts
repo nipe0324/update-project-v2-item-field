@@ -1,5 +1,6 @@
 import * as core from '@actions/core'
-import * as github from '@actions/github'
+import { context } from '@actions/github'
+import { callAsyncFunction } from './async-function'
 import { mustGetOwnerTypeQuery } from './utils'
 import { ExOctokit } from './ex-octokit'
 
@@ -18,13 +19,12 @@ export async function updateProjectV2ItemField(): Promise<void> {
     required: false
   })
 
-  if (!fieldValue && !fieldValueScript) {
+  if (fieldValue === '' && fieldValueScript === '') {
     throw new Error('`field-value` or `field-value-script` is required.')
   }
 
   // Get the issue/PR owner name and node ID from payload
-  const issue =
-    github.context.payload.issue ?? github.context.payload.pull_request
+  const issue = context.payload.issue ?? context.payload.pull_request
 
   // Validate and parse the project URL
   const urlMatch = projectUrl.match(urlParse)
@@ -72,12 +72,16 @@ export async function updateProjectV2ItemField(): Promise<void> {
   }
 
   // Build the value by field data type
-  const value = buildFieldValue(field, fieldValue)
+  const value =
+    fieldValue !== ''
+      ? fieldValue
+      : String(await callAsyncFunction({ context }, fieldValueScript))
+  const projectV2FieldValue = buildProjectV2FieldValue(field, value)
   const updatedItem = await exOctokit.updateProjectV2ItemFieldValue(
     projectV2Id,
     item.id,
     field.id,
-    value
+    projectV2FieldValue
   )
   if (!updatedItem) {
     throw new Error(`Failed to update item field value`)
@@ -86,40 +90,40 @@ export async function updateProjectV2ItemField(): Promise<void> {
   core.debug(`ProjectV2 ID: ${projectV2Id}`)
   core.debug(`Item ID: ${item.id}`)
   core.debug(`Field ID: ${field.id}`)
-  core.debug(`Field Value: ${JSON.stringify(value)}`)
+  core.debug(`Field Value: ${JSON.stringify(projectV2FieldValue)}`)
 
   // Set outputs for other workflow steps to use
   core.setOutput('itemId', updatedItem.id)
 }
 
-function buildFieldValue(
+function buildProjectV2FieldValue(
   field: ProjectV2Field,
-  fieldValue: string
+  value: string
 ): ProjectV2FieldValue {
   switch (field.dataType) {
     case 'TEXT':
-      return { text: fieldValue }
+      return { text: value }
     case 'NUMBER':
-      return { number: Number(fieldValue) }
+      return { number: Number(value) }
     case 'DATE':
-      return { date: fieldValue }
+      return { date: value }
     case 'SINGLE_SELECT': {
-      const option = field.options?.find(o => o.name === fieldValue)
+      const option = field.options?.find(o => o.name === value)
       if (!option) {
-        throw new Error(`Option is not found: ${fieldValue}`)
+        throw new Error(`Option is not found: ${value}`)
       }
       return { singleSelectOptionId: option.id }
     }
     case 'ITERATION': {
       const completedIteration = field.configuration?.completedIterations.find(
-        i => i.title === fieldValue
+        i => i.title === value
       )
       const iteration = field.configuration?.iterations.find(
-        i => i.title === fieldValue
+        i => i.title === value
       )
       const targetIteration = completedIteration ?? iteration
       if (!targetIteration) {
-        throw new Error(`Iteration is not found: ${fieldValue}`)
+        throw new Error(`Iteration is not found: ${value}`)
       }
       return { iterationId: targetIteration.id }
     }

@@ -117,8 +117,11 @@ jobs:
             return Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24)
 ```
 
-For GitHub Actions Triggers, see <https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows>.
-For workflow events and payload, see <https://docs.github.com/en/webhooks/webhook-events-and-payloads>
+References
+
+- GitHub Actions Triggers: <https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows>
+- GitHub Actions Contexts: <https://docs.github.com/en/actions/learn-github-actions/contexts>
+- workflow events and payload: <https://docs.github.com/en/webhooks/webhook-events-and-payloads>
 
 ## Inputs
 
