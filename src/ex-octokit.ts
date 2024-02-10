@@ -57,6 +57,25 @@ export interface ProjectV2Field {
 
 export interface ProjectV2Item {
   id: string
+  fieldValues?: {
+    nodes: {
+      __typename:
+        | 'ProjectV2ItemFieldDateValue'
+        | 'ProjectV2ItemFieldIterationValue'
+        | 'ProjectV2ItemFieldNumberValue'
+        | 'ProjectV2ItemFieldSingleSelectValue'
+        | 'ProjectV2ItemFieldTextValue'
+        | string
+      field?: {
+        name: string
+      }
+      date?: string // ProjectV2ItemFieldDateValue
+      title?: string // ProjectV2ItemFieldIterationValue
+      number?: number // ProjectV2ItemFieldNumberValue
+      name?: string // ProjectV2ItemFieldSingleSelectValue
+      text?: string // ProjectV2ItemFieldTextValue
+    }[]
+  }
 }
 
 export type ProjectV2FieldValue =
@@ -156,6 +175,51 @@ export class ExOctokit {
         addProjectV2ItemById(input: { projectId: $projectV2Id, contentId: $contentId }) {
           item {
             id
+            fieldValues(first: 100) {
+              nodes {
+                __typename
+                ... on ProjectV2ItemFieldDateValue {
+                  field {
+                    ... on ProjectV2Field {
+                      name
+                    }
+                  }
+                  date
+                }
+                ... on ProjectV2ItemFieldIterationValue {
+                  field {
+                    ... on ProjectV2IterationField {
+                      name
+                    }
+                  }
+                  title
+                }
+                ... on ProjectV2ItemFieldNumberValue {
+                  field {
+                    ... on ProjectV2Field {
+                      name
+                    }
+                  }
+                  number
+                }
+                ... on ProjectV2ItemFieldSingleSelectValue {
+                  field {
+                    ... on ProjectV2SingleSelectField {
+                      name
+                    }
+                  }
+                  name
+                }
+                ... on ProjectV2ItemFieldTextValue {
+                  field {
+                    ... on ProjectV2Field {
+                      name
+                    }
+                  }
+                  text
+                }
+              }
+            }
           }
         }
       }`,

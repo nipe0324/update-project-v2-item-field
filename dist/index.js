@@ -28999,6 +28999,51 @@ class ExOctokit {
         addProjectV2ItemById(input: { projectId: $projectV2Id, contentId: $contentId }) {
           item {
             id
+            fieldValues(first: 100) {
+              nodes {
+                __typename
+                ... on ProjectV2ItemFieldDateValue {
+                  field {
+                    ... on ProjectV2Field {
+                      name
+                    }
+                  }
+                  date
+                }
+                ... on ProjectV2ItemFieldIterationValue {
+                  field {
+                    ... on ProjectV2IterationField {
+                      name
+                    }
+                  }
+                  title
+                }
+                ... on ProjectV2ItemFieldNumberValue {
+                  field {
+                    ... on ProjectV2Field {
+                      name
+                    }
+                  }
+                  number
+                }
+                ... on ProjectV2ItemFieldSingleSelectValue {
+                  field {
+                    ... on ProjectV2SingleSelectField {
+                      name
+                    }
+                  }
+                  name
+                }
+                ... on ProjectV2ItemFieldTextValue {
+                  field {
+                    ... on ProjectV2Field {
+                      name
+                    }
+                  }
+                  text
+                }
+              }
+            }
           }
         }
       }`, {

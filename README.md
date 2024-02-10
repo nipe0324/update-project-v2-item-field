@@ -107,13 +107,13 @@ jobs:
           # https://docs.github.com/ja/graphql/reference/objects#projectv2item
           # inspired by https://github.com/actions/github-script/tree/main?tab=readme-ov-file
           field-value-script: |
-            const timeToCloseDays = item.fieldValueByName('Time to Close Days')
+            const timeToCloseDays = item.fields('Time to Close Days')
             if (timeToCloseDays) {
               return timeToCloseDays
             }
 
-            const startDate = item.fieldValueByName('Start Date')
-            const endDate = item.fieldValueByName('End Date')
+            const startDate = item.fields('Start Date')
+            const endDate = item.fields('End Date')
             return Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24)
 ```
 
