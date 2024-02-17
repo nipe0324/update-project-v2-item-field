@@ -2,6 +2,7 @@ import * as core from '@actions/core'
 
 import { Interactor } from '../src/interactor'
 import { ExOctokit } from '../src/ex-octokit'
+import { Item } from '../src/item'
 
 import type { ProjectV2Field } from '../src/ex-octokit'
 import type { Inputs } from '../src/inputs'
@@ -143,6 +144,11 @@ describe('Interactor', () => {
 
       const inputs = mockInputs({ fieldName: 'field-id' })
       const exOctokit = new ExOctokit('token')
+      const item: Item = {
+        id: 'item-id',
+        type: 'ISSUE',
+        fieldValues: {}
+      }
       const field: ProjectV2Field = {
         __typename: 'ProjectV2Field',
         id: 'field-id',
@@ -151,14 +157,11 @@ describe('Interactor', () => {
       }
 
       const interactor = new Interactor(inputs, exOctokit)
-      const result = await interactor.updateItemField(
-        'project-id',
-        'content-id',
-        field
-      )
+      await interactor.updateItemField('project-id', item, field)
 
-      expect(result).toEqual('item-id')
-      expect(info).toHaveBeenCalledWith('update the project V2 item field')
+      expect(info).toHaveBeenCalledWith(
+        'Update the project V2 item field. item-id: item-id'
+      )
     })
   })
 })
@@ -172,7 +175,8 @@ function mockInputs(inputs: any): Inputs {
     fieldName: inputs.fieldName ?? 'field-name',
     fieldValue: inputs.fieldValue ?? 'field-value',
     fieldValueScript: inputs.fieldValueScript ?? 'return field-value-script',
-    skipUpdateScript: inputs.skipUpdateScript ?? 'return false'
+    skipUpdateScript: inputs.skipUpdateScript ?? 'return false',
+    allItems: inputs.allItems ?? false
   }
 }
 

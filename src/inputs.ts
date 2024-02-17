@@ -7,6 +7,7 @@ export interface Inputs {
   fieldValue: string
   fieldValueScript: string
   skipUpdateScript: string | null
+  allItems: boolean
 }
 
 export function getInputs(): Inputs {
@@ -20,6 +21,7 @@ export function getInputs(): Inputs {
   const skipUpdateScript = core.getInput('skip-update-script', {
     required: false
   })
+  const allItems = core.getInput('all-items', { required: false })
 
   return {
     projectUrl,
@@ -27,6 +29,7 @@ export function getInputs(): Inputs {
     fieldName,
     fieldValue,
     fieldValueScript,
-    skipUpdateScript: skipUpdateScript !== '' ? skipUpdateScript : null
+    skipUpdateScript: skipUpdateScript !== '' ? skipUpdateScript : null,
+    allItems: allItems === 'true'
   }
 }

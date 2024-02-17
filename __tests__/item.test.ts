@@ -5,6 +5,7 @@ describe('fromGraphQL', () => {
   it('builds Item', async () => {
     const data: ProjectV2Item = {
       id: 'item-id',
+      type: 'ISSUE',
       fieldValues: {
         nodes: [
           {

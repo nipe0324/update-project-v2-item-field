@@ -22,6 +22,20 @@ interface ProjectV2FieldResponse {
   } | null
 }
 
+interface ProjectV2ItemsResponse {
+  node: {
+    items: {
+      edges: {
+        node: ProjectV2Item
+      }[]
+      pageInfo: {
+        hasNextPage: boolean
+        endCursor: string
+      }
+    }
+  }
+}
+
 interface AddProjectV2ItemByIdResponse {
   addProjectV2ItemById: {
     item: ProjectV2Item
@@ -59,6 +73,7 @@ export interface ProjectV2Field {
 
 export interface ProjectV2Item {
   id: string
+  type: 'DRAFT_ISSUE' | 'ISSUE' | 'PULL_REQUEST' | 'REDACTED'
   fieldValues?: {
     nodes: {
       __typename:
@@ -168,6 +183,107 @@ export class ExOctokit {
     return resp.node?.field ?? undefined
   }
 
+  async fetchProjectV2ItemsWithPagination(
+    projectV2Id: string,
+    cursor?: string
+  ): Promise<ProjectV2Item[]> {
+    let allItems: ProjectV2Item[] = []
+
+    for (let i = 0; i <= 12; i++) {
+      // 12 pages max
+      const resp = await this.fetchProjectV2Items(projectV2Id, cursor ?? '')
+
+      const items = resp.node.items.edges.map(edge => edge.node)
+      allItems = allItems.concat(items)
+
+      const pageInfo = resp.node.items.pageInfo
+      if (!pageInfo.hasNextPage) {
+        return allItems
+      }
+
+      cursor = pageInfo.endCursor
+    }
+
+    return allItems
+  }
+
+  async fetchProjectV2Items(
+    projectV2Id: string,
+    cursor: string
+  ): Promise<ProjectV2ItemsResponse> {
+    const resp = await this.octokit.graphql<ProjectV2ItemsResponse>(
+      `query fetchProjectV2Items($projectV2Id: ID!, $after: String) {
+        node(id: $projectV2Id) {
+          ... on ProjectV2 {
+            items(first: 100, after: $after) {
+              edges {
+                node {
+                  id
+                  type
+                  fieldValues(first: 100) {
+                    nodes {
+                      __typename
+                      ... on ProjectV2ItemFieldDateValue {
+                        field {
+                          ... on ProjectV2Field {
+                            name
+                          }
+                        }
+                        date
+                      }
+                      ... on ProjectV2ItemFieldIterationValue {
+                        field {
+                          ... on ProjectV2IterationField {
+                            name
+                          }
+                        }
+                        title
+                      }
+                      ... on ProjectV2ItemFieldNumberValue {
+                        field {
+                          ... on ProjectV2Field {
+                            name
+                          }
+                        }
+                        number
+                      }
+                      ... on ProjectV2ItemFieldSingleSelectValue {
+                        field {
+                          ... on ProjectV2SingleSelectField {
+                            name
+                          }
+                        }
+                        name
+                      }
+                      ... on ProjectV2ItemFieldTextValue {
+                        field {
+                          ... on ProjectV2Field {
+                            name
+                          }
+                        }
+                        text
+                      }
+                    }
+                  }
+                }
+              }
+              pageInfo {
+                hasNextPage
+                endCursor
+              }
+            }
+          }
+        }
+      }`,
+      {
+        projectV2Id,
+        cursor
+      }
+    )
+
+    return resp
+  }
+
   async addProjectV2ItemByContentId(
     projectV2Id: string,
     contentId: string
@@ -177,6 +293,7 @@ export class ExOctokit {
         addProjectV2ItemById(input: { projectId: $projectV2Id, contentId: $contentId }) {
           item {
             id
+            type
             fieldValues(first: 100) {
               nodes {
                 __typename
@@ -256,6 +373,7 @@ export class ExOctokit {
           }) {
             projectV2Item {
               id
+              type
             }
           }
         }`,
