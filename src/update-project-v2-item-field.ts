@@ -1,59 +1,54 @@
 import * as core from '@actions/core'
+import { getInputs, Inputs, fetchProjectV2Id } from './inputs'
 import { context } from '@actions/github'
 import { callAsyncFunction } from './async-function'
-import { mustGetOwnerTypeQuery } from './utils'
-import { ExOctokit } from './ex-octokit'
+import { ExOctokit, ProjectV2Item } from './ex-octokit'
 import { Item } from './item'
 
 import type { ProjectV2Field, ProjectV2FieldValue } from './ex-octokit'
 
-const urlParse =
-  /\/(?<ownerType>orgs|users)\/(?<ownerName>[^/]+)\/projects\/(?<projectNumber>\d+)/
-
 export async function updateProjectV2ItemField(): Promise<void> {
-  // Get the action inputs
-  const projectUrl = core.getInput('project-url', { required: true })
-  const ghToken = core.getInput('github-token', { required: true })
-  const fieldName = core.getInput('field-name', { required: true })
-  const fieldValue = core.getInput('field-value', { required: false })
-  const fieldValueScript = core.getInput('field-value-script', {
-    required: false
-  })
+  const inputs = getInputs()
 
-  if (fieldValue === '' && fieldValueScript === '') {
+  const exOctokit = new ExOctokit(inputs.ghToken)
+
+  if (inputs.fieldValue === '' && inputs.fieldValueScript === '') {
     throw new Error('`field-value` or `field-value-script` is required.')
+  }
+
+  const projectV2Id = await fetchProjectV2Id(inputs, exOctokit)
+
+  const field = await exOctokit.fetchProjectV2FieldByName(
+    projectV2Id,
+    inputs.fieldName
+  )
+  if (!field) {
+    throw new Error(`Field is not found: ${inputs.fieldName}`)
   }
 
   // Get the issue/PR owner name and node ID from payload
   const issue = context.payload.issue ?? context.payload.pull_request
-
-  // Validate and parse the project URL
-  const urlMatch = projectUrl.match(urlParse)
-  if (!urlMatch) {
-    throw new Error(`Invalid project URL: ${projectUrl}.`)
-  }
-
-  const projectOwnerName = urlMatch.groups?.ownerName
-  if (!projectOwnerName) {
-    throw new Error(`ownerName is undefined.`)
-  }
-  const projectNumber = parseInt(urlMatch.groups?.projectNumber ?? '', 10)
-  const ownerType = urlMatch.groups?.ownerType
-
-  // Fetch the project node ID
-  const exOctokit = new ExOctokit(ghToken)
-  const ownerTypeQuery = mustGetOwnerTypeQuery(ownerType)
-  const projectV2Id = await exOctokit.fetchProjectV2Id(
-    ownerTypeQuery,
-    projectOwnerName,
-    projectNumber
-  )
-  if (!projectV2Id) {
-    throw new Error(`ProjectV2 ID is undefined`)
-  }
-
   const contentId = issue?.node_id
 
+  const updatedItem = await updateItemField(
+    exOctokit,
+    inputs,
+    projectV2Id,
+    contentId,
+    field
+  )
+
+  // Set outputs for other workflow steps to use
+  core.setOutput('itemId', updatedItem.id)
+}
+
+async function updateItemField(
+  exOctokit: ExOctokit,
+  inputs: Inputs,
+  projectV2Id: string,
+  contentId: string,
+  field: ProjectV2Field
+): Promise<ProjectV2Item> {
   // Add the issue/PR to the project and get item
   const itemData = await exOctokit.addProjectV2ItemByContentId(
     projectV2Id,
@@ -65,20 +60,13 @@ export async function updateProjectV2ItemField(): Promise<void> {
 
   const item = Item.fromGraphQL(itemData)
 
-  // Fetch the field node ID
-  const field = await exOctokit.fetchProjectV2FieldByName(
-    projectV2Id,
-    fieldName
-  )
-  if (!field) {
-    throw new Error(`Field is not found: ${fieldName}`)
-  }
-
   // Build the value by field data type
   const value =
-    fieldValue !== ''
-      ? fieldValue
-      : String(await callAsyncFunction({ context, item }, fieldValueScript))
+    inputs.fieldValue !== ''
+      ? inputs.fieldValue
+      : String(
+          await callAsyncFunction({ context, item }, inputs.fieldValueScript)
+        )
   const projectV2FieldValue = buildProjectV2FieldValue(field, value)
   const updatedItem = await exOctokit.updateProjectV2ItemFieldValue(
     projectV2Id,
@@ -95,8 +83,7 @@ export async function updateProjectV2ItemField(): Promise<void> {
   core.debug(`Field ID: ${field.id}`)
   core.debug(`Field Value: ${JSON.stringify(projectV2FieldValue)}`)
 
-  // Set outputs for other workflow steps to use
-  core.setOutput('itemId', updatedItem.id)
+  return updatedItem
 }
 
 function buildProjectV2FieldValue(
