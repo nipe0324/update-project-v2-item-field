@@ -29115,10 +29115,8 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.fetchProjectV2Id = exports.getInputs = void 0;
+exports.getInputs = void 0;
 const core = __importStar(__nccwpck_require__(2186));
-const utils_1 = __nccwpck_require__(1314);
-const urlParse = /\/(?<ownerType>orgs|users)\/(?<ownerName>[^/]+)\/projects\/(?<projectNumber>\d+)/;
 function getInputs() {
     const projectUrl = core.getInput('project-url', { required: true });
     const ghToken = core.getInput('github-token', { required: true });
@@ -29140,26 +29138,145 @@ function getInputs() {
     };
 }
 exports.getInputs = getInputs;
-async function fetchProjectV2Id(inputs, exOctokit) {
-    const urlMatch = inputs.projectUrl.match(urlParse);
-    if (!urlMatch) {
-        throw new Error(`Invalid project URL: ${inputs.projectUrl}.`);
+
+
+/***/ }),
+
+/***/ 5625:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
     }
-    const projectOwnerName = urlMatch.groups?.ownerName;
-    if (!projectOwnerName) {
-        throw new Error(`ownerName is undefined.`);
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Interactor = void 0;
+const core = __importStar(__nccwpck_require__(2186));
+const github_1 = __nccwpck_require__(5438);
+const async_function_1 = __nccwpck_require__(9704);
+const item_1 = __nccwpck_require__(6960);
+const utils_1 = __nccwpck_require__(1314);
+const urlParse = /\/(?<ownerType>orgs|users)\/(?<ownerName>[^/]+)\/projects\/(?<projectNumber>\d+)/;
+class Interactor {
+    inputs;
+    exOctokit;
+    constructor(inputs, exOctokit) {
+        this.inputs = inputs;
+        this.exOctokit = exOctokit;
     }
-    const projectNumber = parseInt(urlMatch.groups?.projectNumber ?? '', 10);
-    const ownerType = urlMatch.groups?.ownerType;
-    // Fetch the project node ID
-    const ownerTypeQuery = (0, utils_1.mustGetOwnerTypeQuery)(ownerType);
-    const projectV2Id = await exOctokit.fetchProjectV2Id(ownerTypeQuery, projectOwnerName, projectNumber);
-    if (!projectV2Id) {
-        throw new Error(`ProjectV2 ID is undefined`);
+    validateInputs() {
+        if (this.inputs.fieldValue === '' && this.inputs.fieldValueScript === '') {
+            throw new Error('`field-value` or `field-value-script` is required.');
+        }
     }
-    return projectV2Id;
+    async fetchProjectV2Id() {
+        const urlMatch = this.inputs.projectUrl.match(urlParse);
+        if (!urlMatch) {
+            throw new Error(`Invalid project URL: ${this.inputs.projectUrl}.`);
+        }
+        const projectOwnerName = urlMatch.groups?.ownerName;
+        if (!projectOwnerName) {
+            throw new Error(`ownerName is undefined.`);
+        }
+        const projectNumber = parseInt(urlMatch.groups?.projectNumber ?? '', 10);
+        const ownerType = urlMatch.groups?.ownerType;
+        // Fetch the project node ID
+        const ownerTypeQuery = (0, utils_1.mustGetOwnerTypeQuery)(ownerType);
+        const projectV2Id = await this.exOctokit.fetchProjectV2Id(ownerTypeQuery, projectOwnerName, projectNumber);
+        if (!projectV2Id) {
+            throw new Error(`ProjectV2 ID is undefined`);
+        }
+        return projectV2Id;
+    }
+    async fetchProjectV2FieldByName(projectV2Id) {
+        const field = await this.exOctokit.fetchProjectV2FieldByName(projectV2Id, this.inputs.fieldName);
+        if (!field) {
+            throw new Error(`Field is not found: ${this.inputs.fieldName}`);
+        }
+        return field;
+    }
+    async updateItemField(projectV2Id, contentId, field) {
+        // Add the issue/PR to the project and get item
+        const itemData = await this.exOctokit.addProjectV2ItemByContentId(projectV2Id, contentId);
+        if (!itemData) {
+            throw new Error(`Failed to add item to project`);
+        }
+        const item = item_1.Item.fromGraphQL(itemData);
+        // Check the skipUpdateScript
+        if (this.inputs.skipUpdateScript) {
+            const isSkip = await (0, async_function_1.callAsyncFunction)({ context: github_1.context, item }, this.inputs.skipUpdateScript);
+            if (isSkip) {
+                core.info('`skip-update-script` returns true. Skip updating the field');
+                return item.id;
+            }
+        }
+        // Build the value by field data type
+        const value = this.inputs.fieldValue !== ''
+            ? this.inputs.fieldValue
+            : String(await (0, async_function_1.callAsyncFunction)({ context: github_1.context, item }, this.inputs.fieldValueScript));
+        const projectV2FieldValue = buildProjectV2FieldValue(field, value);
+        const updatedItem = await this.exOctokit.updateProjectV2ItemFieldValue(projectV2Id, item.id, field.id, projectV2FieldValue);
+        if (!updatedItem) {
+            throw new Error(`Failed to update item field value`);
+        }
+        core.info('update the project V2 item field');
+        core.debug(`ProjectV2 ID: ${projectV2Id}`);
+        core.debug(`Item ID: ${item.id}`);
+        core.debug(`Field ID: ${field.id}`);
+        core.debug(`Field Value: ${JSON.stringify(projectV2FieldValue)}`);
+        return updatedItem.id;
+    }
 }
-exports.fetchProjectV2Id = fetchProjectV2Id;
+exports.Interactor = Interactor;
+function buildProjectV2FieldValue(field, value) {
+    switch (field.dataType) {
+        case 'TEXT':
+            return { text: value };
+        case 'NUMBER':
+            return { number: Number(value) };
+        case 'DATE':
+            return { date: value };
+        case 'SINGLE_SELECT': {
+            const option = field.options?.find(o => o.name === value);
+            if (!option) {
+                throw new Error(`Option is not found: ${value}`);
+            }
+            return { singleSelectOptionId: option.id };
+        }
+        case 'ITERATION': {
+            const completedIteration = field.configuration?.completedIterations.find(i => i.title === value);
+            const iteration = field.configuration?.iterations.find(i => i.title === value);
+            const targetIteration = completedIteration ?? iteration;
+            if (!targetIteration) {
+                throw new Error(`Iteration is not found: ${value}`);
+            }
+            return { iterationId: targetIteration.id };
+        }
+        default:
+            throw new Error(`Unsupported field data type: ${field.dataType}`);
+    }
+}
 
 
 /***/ }),
@@ -29245,14 +29362,17 @@ var __importStar = (this && this.__importStar) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.run = void 0;
 const core = __importStar(__nccwpck_require__(2186));
-const update_project_v2_item_field_1 = __nccwpck_require__(4663);
+const interactor_1 = __nccwpck_require__(5625);
+const github_1 = __nccwpck_require__(5438);
+const inputs_1 = __nccwpck_require__(7063);
+const ex_octokit_1 = __nccwpck_require__(6962);
 /**
  * The main function for the action.
  * @returns {Promise<void>} Resolves when the action is complete.
  */
 async function run() {
     try {
-        (0, update_project_v2_item_field_1.updateProjectV2ItemField)();
+        await updateProjectV2ItemField();
     }
     catch (error) {
         // Fail the workflow run if an error occurs
@@ -29261,123 +29381,19 @@ async function run() {
     }
 }
 exports.run = run;
-
-
-/***/ }),
-
-/***/ 4663:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.updateProjectV2ItemField = void 0;
-const core = __importStar(__nccwpck_require__(2186));
-const inputs_1 = __nccwpck_require__(7063);
-const github_1 = __nccwpck_require__(5438);
-const async_function_1 = __nccwpck_require__(9704);
-const ex_octokit_1 = __nccwpck_require__(6962);
-const item_1 = __nccwpck_require__(6960);
 async function updateProjectV2ItemField() {
     const inputs = (0, inputs_1.getInputs)();
     const exOctokit = new ex_octokit_1.ExOctokit(inputs.ghToken);
-    if (inputs.fieldValue === '' && inputs.fieldValueScript === '') {
-        throw new Error('`field-value` or `field-value-script` is required.');
-    }
-    const projectV2Id = await (0, inputs_1.fetchProjectV2Id)(inputs, exOctokit);
-    const field = await exOctokit.fetchProjectV2FieldByName(projectV2Id, inputs.fieldName);
-    if (!field) {
-        throw new Error(`Field is not found: ${inputs.fieldName}`);
-    }
+    const interactor = new interactor_1.Interactor(inputs, exOctokit);
+    interactor.validateInputs();
+    const projectV2Id = await interactor.fetchProjectV2Id();
+    const field = await interactor.fetchProjectV2FieldByName(projectV2Id);
     // Get the issue/PR owner name and node ID from payload
     const issue = github_1.context.payload.issue ?? github_1.context.payload.pull_request;
     const contentId = issue?.node_id;
-    const itemId = await updateItemField(exOctokit, inputs, projectV2Id, contentId, field);
+    const itemId = await interactor.updateItemField(projectV2Id, contentId, field);
     // Set outputs for other workflow steps to use
     core.setOutput('itemId', itemId);
-}
-exports.updateProjectV2ItemField = updateProjectV2ItemField;
-async function updateItemField(exOctokit, inputs, projectV2Id, contentId, field) {
-    // Add the issue/PR to the project and get item
-    const itemData = await exOctokit.addProjectV2ItemByContentId(projectV2Id, contentId);
-    if (!itemData) {
-        throw new Error(`Failed to add item to project`);
-    }
-    const item = item_1.Item.fromGraphQL(itemData);
-    // Check the skipUpdateScript
-    if (inputs.skipUpdateScript) {
-        const isSkip = await (0, async_function_1.callAsyncFunction)({ context: github_1.context, item }, inputs.skipUpdateScript);
-        if (isSkip) {
-            core.info('`skip-update-script` returns true. Skip updating the field');
-            return item.id;
-        }
-    }
-    // Build the value by field data type
-    const value = inputs.fieldValue !== ''
-        ? inputs.fieldValue
-        : String(await (0, async_function_1.callAsyncFunction)({ context: github_1.context, item }, inputs.fieldValueScript));
-    const projectV2FieldValue = buildProjectV2FieldValue(field, value);
-    const updatedItem = await exOctokit.updateProjectV2ItemFieldValue(projectV2Id, item.id, field.id, projectV2FieldValue);
-    if (!updatedItem) {
-        throw new Error(`Failed to update item field value`);
-    }
-    core.info('update the project V2 item field');
-    core.debug(`ProjectV2 ID: ${projectV2Id}`);
-    core.debug(`Item ID: ${item.id}`);
-    core.debug(`Field ID: ${field.id}`);
-    core.debug(`Field Value: ${JSON.stringify(projectV2FieldValue)}`);
-    return updatedItem.id;
-}
-function buildProjectV2FieldValue(field, value) {
-    switch (field.dataType) {
-        case 'TEXT':
-            return { text: value };
-        case 'NUMBER':
-            return { number: Number(value) };
-        case 'DATE':
-            return { date: value };
-        case 'SINGLE_SELECT': {
-            const option = field.options?.find(o => o.name === value);
-            if (!option) {
-                throw new Error(`Option is not found: ${value}`);
-            }
-            return { singleSelectOptionId: option.id };
-        }
-        case 'ITERATION': {
-            const completedIteration = field.configuration?.completedIterations.find(i => i.title === value);
-            const iteration = field.configuration?.iterations.find(i => i.title === value);
-            const targetIteration = completedIteration ?? iteration;
-            if (!targetIteration) {
-                throw new Error(`Iteration is not found: ${value}`);
-            }
-            return { iterationId: targetIteration.id };
-        }
-        default:
-            throw new Error(`Unsupported field data type: ${field.dataType}`);
-    }
 }
 
 
