@@ -2,7 +2,7 @@ import * as core from '@actions/core'
 import { getInputs, Inputs, fetchProjectV2Id } from './inputs'
 import { context } from '@actions/github'
 import { callAsyncFunction } from './async-function'
-import { ExOctokit, ProjectV2Item } from './ex-octokit'
+import { ExOctokit } from './ex-octokit'
 import { Item } from './item'
 
 import type { ProjectV2Field, ProjectV2FieldValue } from './ex-octokit'
@@ -30,7 +30,7 @@ export async function updateProjectV2ItemField(): Promise<void> {
   const issue = context.payload.issue ?? context.payload.pull_request
   const contentId = issue?.node_id
 
-  const updatedItem = await updateItemField(
+  const itemId = await updateItemField(
     exOctokit,
     inputs,
     projectV2Id,
@@ -39,7 +39,7 @@ export async function updateProjectV2ItemField(): Promise<void> {
   )
 
   // Set outputs for other workflow steps to use
-  core.setOutput('itemId', updatedItem.id)
+  core.setOutput('itemId', itemId)
 }
 
 async function updateItemField(
@@ -48,7 +48,7 @@ async function updateItemField(
   projectV2Id: string,
   contentId: string,
   field: ProjectV2Field
-): Promise<ProjectV2Item> {
+): Promise<string> {
   // Add the issue/PR to the project and get item
   const itemData = await exOctokit.addProjectV2ItemByContentId(
     projectV2Id,
@@ -59,6 +59,18 @@ async function updateItemField(
   }
 
   const item = Item.fromGraphQL(itemData)
+
+  // Check the skipUpdateScript
+  if (inputs.skipUpdateScript) {
+    const isSkip = await callAsyncFunction(
+      { context, item },
+      inputs.skipUpdateScript
+    )
+    if (isSkip) {
+      core.info('`skip-update-script` returns true. Skip updating the field')
+      return item.id
+    }
+  }
 
   // Build the value by field data type
   const value =
@@ -78,12 +90,13 @@ async function updateItemField(
     throw new Error(`Failed to update item field value`)
   }
 
+  core.info('update the project V2 item field')
   core.debug(`ProjectV2 ID: ${projectV2Id}`)
   core.debug(`Item ID: ${item.id}`)
   core.debug(`Field ID: ${field.id}`)
   core.debug(`Field Value: ${JSON.stringify(projectV2FieldValue)}`)
 
-  return updatedItem
+  return updatedItem.id
 }
 
 function buildProjectV2FieldValue(

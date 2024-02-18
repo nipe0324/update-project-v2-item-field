@@ -29127,12 +29127,16 @@ function getInputs() {
     const fieldValueScript = core.getInput('field-value-script', {
         required: false
     });
+    const skipUpdateScript = core.getInput('skip-update-script', {
+        required: false
+    });
     return {
         projectUrl,
         ghToken,
         fieldName,
         fieldValue,
-        fieldValueScript
+        fieldValueScript,
+        skipUpdateScript: skipUpdateScript !== '' ? skipUpdateScript : null
     };
 }
 exports.getInputs = getInputs;
@@ -29311,9 +29315,9 @@ async function updateProjectV2ItemField() {
     // Get the issue/PR owner name and node ID from payload
     const issue = github_1.context.payload.issue ?? github_1.context.payload.pull_request;
     const contentId = issue?.node_id;
-    const updatedItem = await updateItemField(exOctokit, inputs, projectV2Id, contentId, field);
+    const itemId = await updateItemField(exOctokit, inputs, projectV2Id, contentId, field);
     // Set outputs for other workflow steps to use
-    core.setOutput('itemId', updatedItem.id);
+    core.setOutput('itemId', itemId);
 }
 exports.updateProjectV2ItemField = updateProjectV2ItemField;
 async function updateItemField(exOctokit, inputs, projectV2Id, contentId, field) {
@@ -29323,6 +29327,14 @@ async function updateItemField(exOctokit, inputs, projectV2Id, contentId, field)
         throw new Error(`Failed to add item to project`);
     }
     const item = item_1.Item.fromGraphQL(itemData);
+    // Check the skipUpdateScript
+    if (inputs.skipUpdateScript) {
+        const isSkip = await (0, async_function_1.callAsyncFunction)({ context: github_1.context, item }, inputs.skipUpdateScript);
+        if (isSkip) {
+            core.info('`skip-update-script` returns true. Skip updating the field');
+            return item.id;
+        }
+    }
     // Build the value by field data type
     const value = inputs.fieldValue !== ''
         ? inputs.fieldValue
@@ -29332,11 +29344,12 @@ async function updateItemField(exOctokit, inputs, projectV2Id, contentId, field)
     if (!updatedItem) {
         throw new Error(`Failed to update item field value`);
     }
+    core.info('update the project V2 item field');
     core.debug(`ProjectV2 ID: ${projectV2Id}`);
     core.debug(`Item ID: ${item.id}`);
     core.debug(`Field ID: ${field.id}`);
     core.debug(`Field Value: ${JSON.stringify(projectV2FieldValue)}`);
-    return updatedItem;
+    return updatedItem.id;
 }
 function buildProjectV2FieldValue(field, value) {
     switch (field.dataType) {

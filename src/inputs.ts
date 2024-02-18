@@ -11,6 +11,7 @@ export interface Inputs {
   fieldName: string
   fieldValue: string
   fieldValueScript: string
+  skipUpdateScript: string | null
 }
 
 export function getInputs(): Inputs {
@@ -21,13 +22,17 @@ export function getInputs(): Inputs {
   const fieldValueScript = core.getInput('field-value-script', {
     required: false
   })
+  const skipUpdateScript = core.getInput('skip-update-script', {
+    required: false
+  })
 
   return {
     projectUrl,
     ghToken,
     fieldName,
     fieldValue,
-    fieldValueScript
+    fieldValueScript,
+    skipUpdateScript: skipUpdateScript !== '' ? skipUpdateScript : null
   }
 }
 

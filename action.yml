@@ -20,6 +20,10 @@ inputs:
   field-value-script:
     required: false
     description: The script that returns the value of the field to update. (`field-value` or `field-value-script` is required)
+  skip-update-script:
+    required: false
+    description: The script that returns a boolean value to determine whether to update the field. If the script returns `true`, the field will not be updated.
+
 
 outputs:
   projectId:
