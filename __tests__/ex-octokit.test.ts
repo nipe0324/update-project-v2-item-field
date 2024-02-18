@@ -188,6 +188,65 @@ describe('fetchProjectV2FieldByName', () => {
   })
 })
 
+describe('fetchProjectV2ItemsWithPagination', () => {
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it('fetches field on ProjectV2Field', async () => {
+    mockGraphQL({
+      test: /fetchProjectV2Items/,
+      return: {
+        node: {
+          items: {
+            edges: [
+              {
+                node: {
+                  id: 'item-id-1',
+                  fieldValues: {
+                    nodes: [{ __typename: 'ProjectV2ItemFieldRepositoryValue' }]
+                  }
+                }
+              },
+              {
+                node: {
+                  id: 'item-id-2',
+                  fieldValues: {
+                    nodes: [{ __typename: 'ProjectV2ItemFieldRepositoryValue' }]
+                  }
+                }
+              }
+            ],
+            pageInfo: {
+              hasNextPage: false,
+              endCusor: 'B'
+            }
+          }
+        }
+      }
+    })
+
+    const exOctokit = new ExOctokit('gh_token')
+    const projectV2Field =
+      await exOctokit.fetchProjectV2ItemsWithPagination('project-id')
+
+    expect(projectV2Field).toEqual([
+      {
+        id: 'item-id-1',
+        fieldValues: {
+          nodes: [{ __typename: 'ProjectV2ItemFieldRepositoryValue' }]
+        }
+      },
+      {
+        id: 'item-id-2',
+        fieldValues: {
+          nodes: [{ __typename: 'ProjectV2ItemFieldRepositoryValue' }]
+        }
+      }
+    ])
+  })
+})
+
 describe('addProjectV2ItemById', () => {
   afterEach(() => {
     jest.restoreAllMocks()

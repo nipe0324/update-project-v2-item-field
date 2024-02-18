@@ -30,12 +30,13 @@ async function updateProjectV2ItemField(): Promise<void> {
 
   const field = await interactor.fetchProjectV2FieldByName(projectV2Id)
 
-  // Get the issue/PR owner name and node ID from payload
-  const issue = context.payload.issue ?? context.payload.pull_request
-  const contentId = issue?.node_id
+  if (inputs.allItems) {
+    await interactor.updateAllItemFields(projectV2Id, field)
+  } else {
+    // Get the issue/PR owner name and node ID from payload
+    const issue = context.payload.issue ?? context.payload.pull_request
+    const contentId = issue?.node_id
 
-  const itemId = await interactor.updateItemField(projectV2Id, contentId, field)
-
-  // Set outputs for other workflow steps to use
-  core.setOutput('itemId', itemId)
+    await interactor.updateSingleItemField(projectV2Id, field, contentId)
+  }
 }

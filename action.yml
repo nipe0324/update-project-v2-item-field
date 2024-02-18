@@ -7,29 +7,25 @@ branding:
 inputs:
   project-url:
     required: true
-    description: URL of the project vw to update item field
+    description: 'URL of the project vw to update item field'
   github-token:
     required: true
-    description: A GitHub personal access token with write access to the project
+    description: 'A GitHub personal access token with write access to the project'
   field-name:
     required: true
-    description: The name of the field to update. Supported field types are `text`, `number`, `date`, `single_select` and `iteration`
+    description: 'The name of the field to update. Supported field types are `text`, `number`, `date`, `single_select` and `iteration`'
   field-value:
     required: false
-    description: The value of the field to update. (`field-value` or `field-value-script` is required)
+    description: 'The value of the field to update. (`field-value` or `field-value-script` is required)'
   field-value-script:
     required: false
-    description: The script that returns the value of the field to update. (`field-value` or `field-value-script` is required)
+    description: 'The script that returns the value of the field to update. (`field-value` or `field-value-script` is required)'
   skip-update-script:
     required: false
-    description: The script that returns a boolean value to determine whether to update the field. If the script returns `true`, the field will not be updated.
-
-
-outputs:
-  projectId:
-    description: The ID of the GitHub project v2
-  contentId:
-    description: The ID of the Issues or PRs
+    description: 'The script that returns a boolean value to determine whether to update the field. If the script returns `true`, the field will not be updated'
+  all-items:
+    required: false
+    description: 'Update all items in the project (default: false)'
 
 runs:
   using: node20

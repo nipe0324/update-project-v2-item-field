@@ -6,7 +6,11 @@ import { Item } from './item'
 import { mustGetOwnerTypeQuery } from './utils'
 
 import type { Inputs } from './inputs'
-import type { ProjectV2Field, ProjectV2FieldValue } from './ex-octokit'
+import type {
+  ProjectV2Field,
+  ProjectV2FieldValue,
+  ProjectV2Id
+} from './ex-octokit'
 
 const urlParse =
   /\/(?<ownerType>orgs|users)\/(?<ownerName>[^/]+)\/projects\/(?<projectNumber>\d+)/
@@ -68,12 +72,24 @@ export class Interactor {
     return field
   }
 
-  async updateItemField(
-    projectV2Id: string,
-    contentId: string,
+  async updateAllItemFields(
+    projectV2Id: ProjectV2Id,
     field: ProjectV2Field
-  ): Promise<string> {
-    // Add the issue/PR to the project and get item
+  ): Promise<void> {
+    const itemsData =
+      await this.exOctokit.fetchProjectV2ItemsWithPagination(projectV2Id)
+
+    for (const itemData of itemsData) {
+      const item = Item.fromGraphQL(itemData)
+      await this.updateItemField(projectV2Id, item, field)
+    }
+  }
+
+  async updateSingleItemField(
+    projectV2Id: ProjectV2Id,
+    field: ProjectV2Field,
+    contentId: string
+  ): Promise<void> {
     const itemData = await this.exOctokit.addProjectV2ItemByContentId(
       projectV2Id,
       contentId
@@ -84,15 +100,25 @@ export class Interactor {
 
     const item = Item.fromGraphQL(itemData)
 
+    await this.updateItemField(projectV2Id, item, field)
+  }
+
+  async updateItemField(
+    projectV2Id: ProjectV2Id,
+    item: Item,
+    field: ProjectV2Field
+  ): Promise<void> {
     // Check the skipUpdateScript
     if (this.inputs.skipUpdateScript) {
       const isSkip = await callAsyncFunction(
         { context, item },
         this.inputs.skipUpdateScript
       )
+      core.debug(`isSkip: ${isSkip}`)
+
       if (isSkip) {
-        core.info('`skip-update-script` returns true. Skip updating the field')
-        return item.id
+        core.info(`Skip updating the field. item-id: ${item.id}`)
+        return
       }
     }
 
@@ -117,13 +143,11 @@ export class Interactor {
       throw new Error(`Failed to update item field value`)
     }
 
-    core.info('update the project V2 item field')
+    core.info(`Update the project V2 item field. item-id: ${item.id}`)
     core.debug(`ProjectV2 ID: ${projectV2Id}`)
     core.debug(`Item ID: ${item.id}`)
     core.debug(`Field ID: ${field.id}`)
     core.debug(`Field Value: ${JSON.stringify(projectV2FieldValue)}`)
-
-    return updatedItem.id
   }
 }
 

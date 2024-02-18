@@ -29,7 +29,7 @@ jobs:
         run: echo "title=$(date --date='last monday' +'%Y-%m-%d')" >> $GITHUB_OUTPUT
 
       - name: Set current iteration
-        uses: nipe0324/update-project-v2-item-field@v1.3.0
+        uses: nipe0324/update-project-v2-item-field@v2.0.0
         with:
           project-url: https://github.com/orgs|users/<ownerName>/projects/<projejctNumer>
           github-token: ${{ secrets.UPDATE_PROJECT_V2_PAT }}
@@ -52,7 +52,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Update status to "In Review"
-        uses: nipe0324/update-project-v2-item-field@v1.3.0
+        uses: nipe0324/update-project-v2-item-field@v2.0.0
         with:
           project-url: https://github.com/orgs|users/<ownerName>/projects/<projejctNumer>
           github-token: ${{ secrets.UPDATE_PROJECT_V2_PAT }}
@@ -60,28 +60,47 @@ jobs:
           field-value: "In Review"
 ```
 
-### Calculate "Time to Close Days" to handle project management
+### Calculate "Development Days" to handle project management
 
 ```yml
 name: Project Lead Time Automation
 on:
+  schedule:
+    - cron: '* 2 * * 1-5' # Note: timezone is UTC
   issues:
-    types: [opened closed]
+    types: [closed]
 
 jobs:
   lead-time-automation:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-       - name: Get current date
+      - name: Get current date
         id: current-date
         # Note: Default timezone is UTC. Use TZ env to change timezone.
         run: |
           echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
 
+      - name: Set "Start Date" when "In Progress" issue
+        # Note: Item move event is not triggered now (2024/02)
+        if: ${{ github.event.schedule }}
+        uses: nipe0324/update-project-v2-item-field@v2.0.0
+        with:
+          project-url: https://github.com/orgs|users/<ownerName>/projects/<projejctNumer>
+          github-token: ${{ secrets.UPDATE_PROJECT_V2_PAT }}
+          all-items: true
+          skip-update-script: |
+            const isIssue = item.type === 'ISSUE'
+            const startDate = item.fieldValues['Start Date']
+            const status = item.fieldValues['Status']
+
+            return !isIssue || !!startDate || status !== 'In Progress'
+          field-name: "Start Date" # Field Type: Date
+          field-value: "${{ steps.current-date.outputs.date }}"
+
       - name: Set "Start Date" when issue opened
         if: ${{ github.event.action == 'opened'}}
-        uses: nipe0324/update-project-v2-item-field@v1.3.0
+        uses: nipe0324/update-project-v2-item-field@v2.0.0
         with:
           project-url: https://github.com/orgs|users/<ownerName>/projects/<projejctNumer>
           github-token: ${{ secrets.UPDATE_PROJECT_V2_PAT }}
@@ -90,31 +109,32 @@ jobs:
 
       - name: Set "End Date" when issue closed
         if: ${{ github.event.action == 'closed'}}
-        uses: nipe0324/update-project-v2-item-field@v1.3.0
+        uses: nipe0324/update-project-v2-item-field@v2.0.0
         with:
           project-url: https://github.com/orgs|users/<ownerName>/projects/<projejctNumer>
           github-token: ${{ secrets.UPDATE_PROJECT_V2_PAT }}
           field-name: "End Date" # Field Type: Date
           field-value: "${{ steps.current-date.outputs.date }}"
 
-      - name: Calculate "Time to Close Days"
+      - name: Calculate "Development Days" when issue closed
         if: ${{ github.event.action == 'closed'}}
-        uses: nipe0324/update-project-v2-item-field@v1.3.0
+        uses: nipe0324/update-project-v2-item-field@v2.0.0
         with:
           project-url: https://github.com/orgs|users/<ownerName>/projects/<projejctNumer>
           github-token: ${{ secrets.UPDATE_PROJECT_V2_PAT }}
-          field-name: "Time to Close Days" # Field Type: Number
+          field-name: "Development Days" # Field Type: Number
           # Note: you can access `context` and `item`. see `type AsyncFunctionArguments`.
           field-value-script: |
-            const timeToCloseDays = item.fieldValues['Time to Close Days']
-            if (timeToCloseDays) {
-              return timeToCloseDays
+            const developmentDays = item.fieldValues['Development Days']
+            if (developmentDays) {
+              return developmentDays
             }
 
-            const startDate = new Date(item.fieldValues['Start Date'])
             const endDate = new Date(item.fieldValues['End Date'])
+            const startDate = new Date(item.fieldValues['Start Date'] ?? endDate)
             const diff = (endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24)
-            return Math.round(diff)
+            const days = Math.round(diff)
+            return days === 0 ? 0.5 : days // `days === 0` means less than 1 day
 ```
 
 References
@@ -134,10 +154,11 @@ References
 - `field-value` **(conditionally required)** is a field value of the project v2 item to update. (`field-value` or `field-value-script` is required)
 - `field-value-script`: **(conditionally required)** is the script that returns the value of the field to update. (`field-value` or `field-value-script` is required)
 - `condition-script`: **(optional)** is the script that returns a boolean value to determine whether to update the field. If the script returns `true`, the field will not be updated.
+- `all-items`: **(optional)** updates all items in the project (default: false).
 
 ## Outputs
 
-- `item-id` is the ID of the project v2 updated item.
+None
 
 ## FAQ
 
@@ -183,8 +204,8 @@ the "dist/" directory.
 
 ```shell
 npm run all
-git tag v1.3.0
-git push origin v1.3.0
+git tag v2.0.0
+git push origin v2.0.0
 ```
 
 Now, a release can be created from the branch containing the built action.

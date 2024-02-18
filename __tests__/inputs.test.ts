@@ -21,7 +21,8 @@ describe('getInputs', () => {
       fieldName: 'Text Input Field',
       fieldValue: 'Hello, World!',
       fieldValueScript: '',
-      skipUpdateScript: null
+      skipUpdateScript: null,
+      allItems: false
     })
   })
 
@@ -40,7 +41,28 @@ describe('getInputs', () => {
       fieldName: 'Text Input Field',
       fieldValue: '',
       fieldValueScript: 'return "Hello, World!"',
-      skipUpdateScript: 'return true'
+      skipUpdateScript: 'return true',
+      allItems: false
+    })
+  })
+
+  it('returns allItems true when `all-items` is `true`', async () => {
+    mockGetInput({
+      'project-url': 'https://github.com/orgs/nipe0324/projects/1',
+      'github-token': 'gh_token',
+      'field-name': 'Text Input Field',
+      'field-value-script': 'return "Hello, World!"',
+      'all-items': 'true'
+    })
+
+    expect(getInputs()).toEqual({
+      projectUrl: 'https://github.com/orgs/nipe0324/projects/1',
+      ghToken: 'gh_token',
+      fieldName: 'Text Input Field',
+      fieldValue: '',
+      fieldValueScript: 'return "Hello, World!"',
+      skipUpdateScript: null,
+      allItems: true
     })
   })
 })

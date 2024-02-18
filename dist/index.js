@@ -28997,11 +28997,96 @@ class ExOctokit {
         });
         return resp.node?.field ?? undefined;
     }
+    async fetchProjectV2ItemsWithPagination(projectV2Id, cursor) {
+        let allItems = [];
+        for (let i = 0; i <= 12; i++) {
+            // 12 pages max
+            const resp = await this.fetchProjectV2Items(projectV2Id, cursor ?? '');
+            const items = resp.node.items.edges.map(edge => edge.node);
+            allItems = allItems.concat(items);
+            const pageInfo = resp.node.items.pageInfo;
+            if (!pageInfo.hasNextPage) {
+                return allItems;
+            }
+            cursor = pageInfo.endCursor;
+        }
+        return allItems;
+    }
+    async fetchProjectV2Items(projectV2Id, cursor) {
+        const resp = await this.octokit.graphql(`query fetchProjectV2Items($projectV2Id: ID!, $after: String) {
+        node(id: $projectV2Id) {
+          ... on ProjectV2 {
+            items(first: 100, after: $after) {
+              edges {
+                node {
+                  id
+                  type
+                  fieldValues(first: 100) {
+                    nodes {
+                      __typename
+                      ... on ProjectV2ItemFieldDateValue {
+                        field {
+                          ... on ProjectV2Field {
+                            name
+                          }
+                        }
+                        date
+                      }
+                      ... on ProjectV2ItemFieldIterationValue {
+                        field {
+                          ... on ProjectV2IterationField {
+                            name
+                          }
+                        }
+                        title
+                      }
+                      ... on ProjectV2ItemFieldNumberValue {
+                        field {
+                          ... on ProjectV2Field {
+                            name
+                          }
+                        }
+                        number
+                      }
+                      ... on ProjectV2ItemFieldSingleSelectValue {
+                        field {
+                          ... on ProjectV2SingleSelectField {
+                            name
+                          }
+                        }
+                        name
+                      }
+                      ... on ProjectV2ItemFieldTextValue {
+                        field {
+                          ... on ProjectV2Field {
+                            name
+                          }
+                        }
+                        text
+                      }
+                    }
+                  }
+                }
+              }
+              pageInfo {
+                hasNextPage
+                endCursor
+              }
+            }
+          }
+        }
+      }`, {
+            projectV2Id,
+            cursor
+        });
+        return resp;
+    }
     async addProjectV2ItemByContentId(projectV2Id, contentId) {
         const resp = await this.octokit.graphql(`mutation addProjectV2ItemById($projectV2Id: ID!, $contentId: ID!) {
         addProjectV2ItemById(input: { projectId: $projectV2Id, contentId: $contentId }) {
           item {
             id
+            type
             fieldValues(first: 100) {
               nodes {
                 __typename
@@ -29070,6 +29155,7 @@ class ExOctokit {
           }) {
             projectV2Item {
               id
+              type
             }
           }
         }`, {
@@ -29128,13 +29214,15 @@ function getInputs() {
     const skipUpdateScript = core.getInput('skip-update-script', {
         required: false
     });
+    const allItems = core.getInput('all-items', { required: false });
     return {
         projectUrl,
         ghToken,
         fieldName,
         fieldValue,
         fieldValueScript,
-        skipUpdateScript: skipUpdateScript !== '' ? skipUpdateScript : null
+        skipUpdateScript: skipUpdateScript !== '' ? skipUpdateScript : null,
+        allItems: allItems === 'true'
     };
 }
 exports.getInputs = getInputs;
@@ -29216,19 +29304,29 @@ class Interactor {
         }
         return field;
     }
-    async updateItemField(projectV2Id, contentId, field) {
-        // Add the issue/PR to the project and get item
+    async updateAllItemFields(projectV2Id, field) {
+        const itemsData = await this.exOctokit.fetchProjectV2ItemsWithPagination(projectV2Id);
+        for (const itemData of itemsData) {
+            const item = item_1.Item.fromGraphQL(itemData);
+            await this.updateItemField(projectV2Id, item, field);
+        }
+    }
+    async updateSingleItemField(projectV2Id, field, contentId) {
         const itemData = await this.exOctokit.addProjectV2ItemByContentId(projectV2Id, contentId);
         if (!itemData) {
             throw new Error(`Failed to add item to project`);
         }
         const item = item_1.Item.fromGraphQL(itemData);
+        await this.updateItemField(projectV2Id, item, field);
+    }
+    async updateItemField(projectV2Id, item, field) {
         // Check the skipUpdateScript
         if (this.inputs.skipUpdateScript) {
             const isSkip = await (0, async_function_1.callAsyncFunction)({ context: github_1.context, item }, this.inputs.skipUpdateScript);
+            core.debug(`isSkip: ${isSkip}`);
             if (isSkip) {
-                core.info('`skip-update-script` returns true. Skip updating the field');
-                return item.id;
+                core.info(`Skip updating the field. item-id: ${item.id}`);
+                return;
             }
         }
         // Build the value by field data type
@@ -29240,12 +29338,11 @@ class Interactor {
         if (!updatedItem) {
             throw new Error(`Failed to update item field value`);
         }
-        core.info('update the project V2 item field');
+        core.info(`Update the project V2 item field. item-id: ${item.id}`);
         core.debug(`ProjectV2 ID: ${projectV2Id}`);
         core.debug(`Item ID: ${item.id}`);
         core.debug(`Field ID: ${field.id}`);
         core.debug(`Field Value: ${JSON.stringify(projectV2FieldValue)}`);
-        return updatedItem.id;
     }
 }
 exports.Interactor = Interactor;
@@ -29291,9 +29388,11 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Item = void 0;
 class Item {
     id;
+    type;
     fieldValues;
-    constructor(id, fieldValues) {
+    constructor(id, type, fieldValues) {
         this.id = id;
+        this.type = type;
         this.fieldValues = fieldValues;
     }
     static fromGraphQL(data) {
@@ -29323,7 +29422,7 @@ class Item {
                     break; // not support other types
             }
         }
-        return new Item(data.id, fieldValues);
+        return new Item(data.id, data.type, fieldValues);
     }
 }
 exports.Item = Item;
@@ -29388,12 +29487,15 @@ async function updateProjectV2ItemField() {
     interactor.validateInputs();
     const projectV2Id = await interactor.fetchProjectV2Id();
     const field = await interactor.fetchProjectV2FieldByName(projectV2Id);
-    // Get the issue/PR owner name and node ID from payload
-    const issue = github_1.context.payload.issue ?? github_1.context.payload.pull_request;
-    const contentId = issue?.node_id;
-    const itemId = await interactor.updateItemField(projectV2Id, contentId, field);
-    // Set outputs for other workflow steps to use
-    core.setOutput('itemId', itemId);
+    if (inputs.allItems) {
+        await interactor.updateAllItemFields(projectV2Id, field);
+    }
+    else {
+        // Get the issue/PR owner name and node ID from payload
+        const issue = github_1.context.payload.issue ?? github_1.context.payload.pull_request;
+        const contentId = issue?.node_id;
+        await interactor.updateSingleItemField(projectV2Id, field, contentId);
+    }
 }
 
 

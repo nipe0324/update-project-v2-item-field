@@ -7,7 +7,6 @@ import { ExOctokit } from '../src/ex-octokit'
 jest.mock('@actions/core')
 
 describe('run', () => {
-  let outputs: Record<string, string>
   let info: jest.SpyInstance
   let debug: jest.SpyInstance
 
@@ -33,7 +32,6 @@ describe('run', () => {
 
     info = mockInfo()
     debug = mockDebug()
-    outputs = mockSetOutput()
   })
 
   afterEach(() => {
@@ -59,12 +57,13 @@ describe('run', () => {
 
     await run()
 
-    expect(info).toHaveBeenCalledWith('update the project V2 item field')
+    expect(info).toHaveBeenCalledWith(
+      'Update the project V2 item field. item-id: item-id'
+    )
     expect(debug).toHaveBeenCalledWith('ProjectV2 ID: project-id')
     expect(debug).toHaveBeenCalledWith('Item ID: item-id')
     expect(debug).toHaveBeenCalledWith('Field ID: field-id')
     expect(debug).toHaveBeenCalledWith('Field Value: {"text":"Hello, World!"}')
-    expect(outputs.itemId).toEqual('item-id')
   })
 
   it('updates project v2 SINGLE_SELECT item field', async () => {
@@ -90,14 +89,15 @@ describe('run', () => {
 
     await run()
 
-    expect(info).toHaveBeenCalledWith('update the project V2 item field')
+    expect(info).toHaveBeenCalledWith(
+      'Update the project V2 item field. item-id: item-id'
+    )
     expect(debug).toHaveBeenCalledWith('ProjectV2 ID: project-id')
     expect(debug).toHaveBeenCalledWith('Item ID: item-id')
     expect(debug).toHaveBeenCalledWith('Field ID: field-id')
     expect(debug).toHaveBeenCalledWith(
       'Field Value: {"singleSelectOptionId":"3"}'
     )
-    expect(outputs.itemId).toEqual('item-id')
   })
 
   it('updates project v2 ITERATION item field', async () => {
@@ -125,12 +125,13 @@ describe('run', () => {
 
     await run()
 
-    expect(info).toHaveBeenCalledWith('update the project V2 item field')
+    expect(info).toHaveBeenCalledWith(
+      'Update the project V2 item field. item-id: item-id'
+    )
     expect(debug).toHaveBeenCalledWith('ProjectV2 ID: project-id')
     expect(debug).toHaveBeenCalledWith('Item ID: item-id')
     expect(debug).toHaveBeenCalledWith('Field ID: field-id')
     expect(debug).toHaveBeenCalledWith('Field Value: {"iterationId":"2"}')
-    expect(outputs.itemId).toEqual('item-id')
   })
 
   it('updates project v2 DATE item field by field-value-script', async () => {
@@ -168,12 +169,48 @@ describe('run', () => {
 
     await run()
 
-    expect(info).toHaveBeenCalledWith('update the project V2 item field')
+    expect(info).toHaveBeenCalledWith(
+      'Update the project V2 item field. item-id: item-id'
+    )
     expect(debug).toHaveBeenCalledWith('ProjectV2 ID: project-id')
     expect(debug).toHaveBeenCalledWith('Item ID: item-id')
     expect(debug).toHaveBeenCalledWith('Field ID: field-id')
     expect(debug).toHaveBeenCalledWith(`Field Value: {"date":"2024-02-02"}`)
-    expect(outputs.itemId).toEqual('item-id')
+  })
+
+  it('updates project v2 all item fields when `all-items` is true', async () => {
+    mockGetInput({
+      'project-url': 'https://github.com/orgs/nipe0324/projects/1',
+      'github-token': 'gh_token',
+      'field-name': 'Text Input Field',
+      'field-value': 'Hello, World!',
+      'all-items': 'true'
+    })
+
+    mockFetchProjectV2Id().mockResolvedValue('project-id')
+    mockFetchProjectV2FieldByName().mockResolvedValue({
+      id: 'field-id',
+      dataType: 'TEXT'
+    })
+    mockFetchProjectV2ItemsWithPagination().mockResolvedValue([
+      { id: 'item-id-1' },
+      { id: 'item-id-2' }
+    ])
+    mockUpdateProjectV2ItemFieldValue().mockResolvedValue({ id: 'item-id-2' })
+
+    await run()
+
+    expect(info).toHaveBeenCalledWith(
+      'Update the project V2 item field. item-id: item-id-1'
+    )
+    expect(info).toHaveBeenCalledWith(
+      'Update the project V2 item field. item-id: item-id-2'
+    )
+    expect(debug).toHaveBeenCalledWith('ProjectV2 ID: project-id')
+    expect(debug).toHaveBeenCalledWith('Item ID: item-id-1')
+    expect(debug).toHaveBeenCalledWith('Item ID: item-id-2')
+    expect(debug).toHaveBeenCalledWith('Field ID: field-id')
+    expect(debug).toHaveBeenCalledWith('Field Value: {"text":"Hello, World!"}')
   })
 
   it('skip to update project v2 item field when condition-script is false', async () => {
@@ -196,9 +233,8 @@ describe('run', () => {
     await run()
 
     expect(info).toHaveBeenCalledWith(
-      '`skip-update-script` returns true. Skip updating the field'
+      'Skip updating the field. item-id: item-id'
     )
-    expect(outputs.itemId).toEqual('item-id')
   })
 
   it(`throws an error when field-value and field-value-script are blank`, async () => {
@@ -236,14 +272,6 @@ function mockGetInput(mocks: Record<string, string>): jest.SpyInstance {
   return jest.spyOn(core, 'getInput').mockImplementation(mock)
 }
 
-function mockSetOutput(): Record<string, string> {
-  const output: Record<string, string> = {}
-  jest
-    .spyOn(core, 'setOutput')
-    .mockImplementation((key, value) => (output[key] = value))
-  return output
-}
-
 function mockInfo(): jest.SpyInstance {
   return jest.spyOn(core, 'info').mockImplementation()
 }
@@ -264,6 +292,9 @@ function mockFetchProjectV2FieldByName(): jest.SpyInstance {
   return jest.spyOn(ExOctokit.prototype, 'fetchProjectV2FieldByName')
 }
 
+function mockFetchProjectV2ItemsWithPagination(): jest.SpyInstance {
+  return jest.spyOn(ExOctokit.prototype, 'fetchProjectV2ItemsWithPagination')
+}
 function mockUpdateProjectV2ItemFieldValue(): jest.SpyInstance {
   return jest.spyOn(ExOctokit.prototype, 'updateProjectV2ItemFieldValue')
 }

@@ -2,16 +2,20 @@
 
 import { ProjectV2Item } from './ex-octokit'
 
+type ItemType = 'DRAFT_ISSUE' | 'ISSUE' | 'PULL_REQUEST' | 'REDACTED'
+
 interface ItemFieldValues {
   [key: string]: any
 }
 
 export class Item {
   id: string
+  type: ItemType
   fieldValues: ItemFieldValues
 
-  constructor(id: string, fieldValues: ItemFieldValues) {
+  constructor(id: string, type: ItemType, fieldValues: ItemFieldValues) {
     this.id = id
+    this.type = type
     this.fieldValues = fieldValues
   }
 
@@ -44,6 +48,6 @@ export class Item {
       }
     }
 
-    return new Item(data.id, fieldValues)
+    return new Item(data.id, data.type, fieldValues)
   }
 }
