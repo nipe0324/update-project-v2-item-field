@@ -1,15 +1,17 @@
 import { getOctokit } from '@actions/github'
 
+export type ProjectV2Id = string
+
 interface ProjectV2IdResponse {
   organization?: {
     projectV2: {
-      id: string
+      id: ProjectV2Id
     }
   }
 
   user?: {
     projectV2: {
-      id: string
+      id: ProjectV2Id
     }
   }
 }
@@ -96,7 +98,7 @@ export class ExOctokit {
     ownerTypeQuery: 'organization' | 'user',
     projectOwnerName: string,
     projectNumber: number
-  ): Promise<string | undefined> {
+  ): Promise<ProjectV2Id | undefined> {
     const resp = await this.octokit.graphql<ProjectV2IdResponse>(
       `query fetchProjectV2Id($projectOwnerName: String!, $projectNumber: Int!) {
         ${ownerTypeQuery}(login: $projectOwnerName) {
