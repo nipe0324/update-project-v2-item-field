@@ -98,15 +98,6 @@ jobs:
           field-name: "Start Date" # Field Type: Date
           field-value: "${{ steps.current-date.outputs.date }}"
 
-      - name: Set "Start Date" when issue opened
-        if: ${{ github.event.action == 'opened'}}
-        uses: nipe0324/update-project-v2-item-field@v2.0.0
-        with:
-          project-url: https://github.com/orgs|users/<ownerName>/projects/<projejctNumer>
-          github-token: ${{ secrets.UPDATE_PROJECT_V2_PAT }}
-          field-name: "Start Date" # Field Type: Date
-          field-value: "${{ steps.current-date.outputs.date }}"
-
       - name: Set "End Date" when issue closed
         if: ${{ github.event.action == 'closed'}}
         uses: nipe0324/update-project-v2-item-field@v2.0.0
