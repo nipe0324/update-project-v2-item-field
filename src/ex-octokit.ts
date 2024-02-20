@@ -1,3 +1,4 @@
+import * as core from '@actions/core'
 import { getOctokit } from '@actions/github'
 
 export type ProjectV2Id = string
@@ -184,24 +185,28 @@ export class ExOctokit {
   }
 
   async fetchProjectV2ItemsWithPagination(
-    projectV2Id: string,
-    cursor?: string
+    projectV2Id: string
   ): Promise<ProjectV2Item[]> {
     let allItems: ProjectV2Item[] = []
 
+    let after = ''
     for (let i = 0; i <= 12; i++) {
+      core.info(`i: ${i}`)
       // 12 pages max
-      const resp = await this.fetchProjectV2Items(projectV2Id, cursor ?? '')
+      const resp = await this.fetchProjectV2Items(projectV2Id, after)
+      core.info(`after: ${after}`)
 
       const items = resp.node.items.edges.map(edge => edge.node)
+      core.info(`items[0].id: ${JSON.stringify(items[0].id)}`)
       allItems = allItems.concat(items)
 
       const pageInfo = resp.node.items.pageInfo
+      core.info(`pageInfo: ${JSON.stringify(pageInfo)}`)
       if (!pageInfo.hasNextPage) {
         return allItems
       }
 
-      cursor = pageInfo.endCursor
+      after = pageInfo.endCursor
     }
 
     return allItems
@@ -209,7 +214,7 @@ export class ExOctokit {
 
   async fetchProjectV2Items(
     projectV2Id: string,
-    cursor: string
+    after: string
   ): Promise<ProjectV2ItemsResponse> {
     const resp = await this.octokit.graphql<ProjectV2ItemsResponse>(
       `query fetchProjectV2Items($projectV2Id: ID!, $after: String) {
@@ -277,7 +282,7 @@ export class ExOctokit {
       }`,
       {
         projectV2Id,
-        cursor
+        after
       }
     )
 
