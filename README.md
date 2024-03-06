@@ -144,7 +144,7 @@ References
   - note: Supported field types are `text`, `number`, `date`, `single_select` and `iteration`.
 - `field-value` **(conditionally required)** is a field value of the project v2 item to update. (`field-value` or `field-value-script` is required)
 - `field-value-script`: **(conditionally required)** is the script that returns the value of the field to update. (`field-value` or `field-value-script` is required)
-- `condition-script`: **(optional)** is the script that returns a boolean value to determine whether to update the field. If the script returns `true`, the field will not be updated.
+- `skip-update-script`: **(optional)** is the script that returns a boolean value to determine whether to update the field. If the script returns `true`, the field will not be updated.
 - `all-items`: **(optional)** updates all items in the project (default: false).
 
 ## Outputs
