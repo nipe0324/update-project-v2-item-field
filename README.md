@@ -29,7 +29,7 @@ jobs:
         run: echo "title=$(date --date='last monday' +'%Y-%m-%d')" >> $GITHUB_OUTPUT
 
       - name: Set current iteration
-        uses: nipe0324/update-project-v2-item-field@v2.0.1
+        uses: nipe0324/update-project-v2-item-field@v2.0.2
         with:
           project-url: https://github.com/orgs|users/<ownerName>/projects/<projejctNumer>
           github-token: ${{ secrets.UPDATE_PROJECT_V2_PAT }}
@@ -52,7 +52,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Update status to "In Review"
-        uses: nipe0324/update-project-v2-item-field@v2.0.1
+        uses: nipe0324/update-project-v2-item-field@v2.0.2
         with:
           project-url: https://github.com/orgs|users/<ownerName>/projects/<projejctNumer>
           github-token: ${{ secrets.UPDATE_PROJECT_V2_PAT }}
@@ -84,7 +84,7 @@ jobs:
       - name: Set "Start Date" when "In Progress" issue
         # Note: Item move event is not triggered now (2024/02)
         if: ${{ github.event.schedule }}
-        uses: nipe0324/update-project-v2-item-field@v2.0.1
+        uses: nipe0324/update-project-v2-item-field@v2.0.2
         with:
           project-url: https://github.com/orgs|users/<ownerName>/projects/<projejctNumer>
           github-token: ${{ secrets.UPDATE_PROJECT_V2_PAT }}
@@ -100,7 +100,7 @@ jobs:
 
       - name: Set "End Date" when issue closed
         if: ${{ github.event.action == 'closed'}}
-        uses: nipe0324/update-project-v2-item-field@v2.0.1
+        uses: nipe0324/update-project-v2-item-field@v2.0.2
         with:
           project-url: https://github.com/orgs|users/<ownerName>/projects/<projejctNumer>
           github-token: ${{ secrets.UPDATE_PROJECT_V2_PAT }}
@@ -109,7 +109,7 @@ jobs:
 
       - name: Calculate "Development Days" when issue closed
         if: ${{ github.event.action == 'closed'}}
-        uses: nipe0324/update-project-v2-item-field@v2.0.1
+        uses: nipe0324/update-project-v2-item-field@v2.0.2
         with:
           project-url: https://github.com/orgs|users/<ownerName>/projects/<projejctNumer>
           github-token: ${{ secrets.UPDATE_PROJECT_V2_PAT }}
@@ -195,8 +195,8 @@ the "dist/" directory.
 
 ```shell
 npm run all
-git tag v2.0.1
-git push origin v2.0.1
+git tag v2.0.2
+git push origin v2.0.2
 ```
 
 Now, a release can be created from the branch containing the built action.
